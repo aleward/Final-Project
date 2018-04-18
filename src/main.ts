@@ -1,6 +1,7 @@
 import {vec3} from 'gl-matrix';
 import {mat4, vec4} from 'gl-matrix';
 import * as Stats from 'stats-js';
+import Audio from './Audio';
 import * as DAT from 'dat-gui';
 import Cube from './geometry/Cube';
 import Icosphere from './geometry/Icosphere';
@@ -43,15 +44,18 @@ function main() {
 
   // get canvas and webgl context
   const canvas = <HTMLCanvasElement> document.getElementById('canvas');
-  const gl = <WebGL2RenderingContext> canvas.getContext('webgl2');
+  var canvasCtx = canvas.getContext("2d");
+  /*const gl = <WebGL2RenderingContext> canvas.getContext('webgl2');
   if (!gl) {
     alert('WebGL 2 not supported!');
   }
   // Sets the value of `gl` in the `globals.ts` module.
-  setGL(gl);
+  setGL(gl);*/
+
+  var aud: Audio = new Audio('~/Documents/Classes/Sophomore/SEM2/CIS566/Final-Project/src/audio-files/uys7.mp3');
 
   // Initial call to load scene
-  loadScene(6, 3, true);
+  /*loadScene(6, 3, true);
 
   const camera = new Camera(vec3.fromValues(-0.85, 0.9, 3), vec3.fromValues(0, 0, 0));
 
@@ -110,9 +114,50 @@ function main() {
     // Tell the browser to call `tick` again whenever it renders a new frame
     time = time + 1;
     requestAnimationFrame(tick);
-  }
+  } */
 
-  window.addEventListener('resize', function() {
+  console.log(aud);
+
+  function draw() {
+  
+    aud.analyzer.getByteTimeDomainData(aud.dataArr);
+  
+    canvasCtx.fillStyle = "rgb(200, 200, 200)";
+    canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+  
+    canvasCtx.lineWidth = 2;
+    canvasCtx.strokeStyle = "rgb(0, 0, 0)";
+  
+    canvasCtx.beginPath();
+  
+    var sliceWidth = canvas.width * 1.0 / aud.buffLength;
+    var x = 0;
+  
+    for (var i = 0; i < aud.buffLength; i++) {
+  
+      var v = aud.dataArr[i] / 128.0;
+      var y = v * canvas.height / 2;
+  
+      if (i === 0) {
+        canvasCtx.moveTo(x, y);
+      } else {
+        canvasCtx.lineTo(x, y);
+      }
+  
+      x += sliceWidth;
+    }
+  
+    canvasCtx.lineTo(canvas.width, canvas.height / 2);
+    canvasCtx.stroke();
+
+    requestAnimationFrame(draw);
+
+  }
+  
+  draw();
+
+
+  /*window.addEventListener('resize', function() {
     renderer.setSize(window.innerWidth, window.innerHeight);
     camera.setAspectRatio(window.innerWidth / window.innerHeight);
     camera.updateProjectionMatrix();
@@ -123,7 +168,7 @@ function main() {
   camera.updateProjectionMatrix();
 
   // Start the render loop
-  tick();
+  tick(); */
 }
 
 main();
