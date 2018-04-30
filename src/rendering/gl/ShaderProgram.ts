@@ -1,4 +1,4 @@
-import {vec4, mat4} from 'gl-matrix';
+import {vec4, mat4, vec3} from 'gl-matrix';
 import Drawable from './Drawable';
 import {gl} from '../../globals';
 
@@ -30,6 +30,7 @@ class ShaderProgram {
   unifViewProj: WebGLUniformLocation;
   unifColor: WebGLUniformLocation;
   unifTime: WebGLUniformLocation;
+  unifEye: WebGLUniformLocation;
 
 
   constructor(shaders: Array<Shader>) {
@@ -51,6 +52,7 @@ class ShaderProgram {
     this.unifViewProj   = gl.getUniformLocation(this.prog, "u_ViewProj");
     this.unifColor      = gl.getUniformLocation(this.prog, "u_Color");
     this.unifTime       = gl.getUniformLocation(this.prog, "u_Time");
+    this.unifEye       = gl.getUniformLocation(this.prog, "u_Eye");
   }
 
   use() {
@@ -95,6 +97,13 @@ class ShaderProgram {
     }
   }
 
+  setEye(eye: vec3) {
+    this.use();
+    if (this.unifEye !== -1) {
+      gl.uniform3fv(this.unifEye, eye);
+    }
+  }
+
   draw(d: Drawable) {
     this.use();
 
@@ -106,11 +115,6 @@ class ShaderProgram {
     if (this.attrNor != -1 && d.bindNor()) {
       gl.enableVertexAttribArray(this.attrNor);
       gl.vertexAttribPointer(this.attrNor, 4, gl.FLOAT, false, 0, 0);
-    }
-
-    if (this.attrCol != -1 && d.bindCol()) {
-      gl.enableVertexAttribArray(this.attrCol);
-      gl.vertexAttribPointer(this.attrCol, 4, gl.FLOAT, false, 0, 0);
     }
 
     d.bindIdx();
