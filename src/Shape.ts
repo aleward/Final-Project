@@ -1,7 +1,12 @@
 import {vec3} from 'gl-matrix';
-import {mat4, vec4} from 'gl-matrix';
 
-// Uses WebGL to load objs for each needed shape
+/* Alexis Ward
+ * id: aleward
+ * CIS 566 
+ * 
+ * Uses WebGL to load objs for each needed shape
+ */ 
+
 export class Shape {
     // Variables to read mesh
     obj: string;
@@ -9,10 +14,8 @@ export class Shape {
 
     // Values for the future VBO
     pos: vec3[] = [];
-    //norms: number[] = [];
-    //idx: number[] = [];
 
-    constructor(file: string) {
+    constructor(file: string, scale: number) {
         // Reads the obj from index.html
         var OBJload = require('webgl-obj-loader');
 
@@ -21,14 +24,9 @@ export class Shape {
 
         // The read in values:
         for (let i = 0; i < this.mesh.vertices.length; i+= 3) {
-            this.pos.push(vec3.fromValues(this.mesh.vertices[i] * 10,
-                                          this.mesh.vertices[i + 1] * 10,
-                                          this.mesh.vertices[i + 2] * 10));
+            this.pos.push(vec3.fromValues(this.mesh.vertices[i] * scale,
+                                          this.mesh.vertices[i + 1] * scale,
+                                          this.mesh.vertices[i + 2] * scale));
         }
-        
-
-
-        //this.norms = this.mesh.vertexNormals;
-        //this.idx = this.mesh.indices;
     }
 }

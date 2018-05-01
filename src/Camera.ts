@@ -20,6 +20,8 @@ class Camera {
   constructor(position: vec3, target: vec3) {
     const canvas = <HTMLCanvasElement> document.getElementById('canvas');
 
+    /* I altered "position" to be "eye" and added a "use" variable in the camera.js and view.js
+     * files to check whether to move the camera */ 
     this.controls = CameraControls(canvas, {
       eye: position,
       center: target,
