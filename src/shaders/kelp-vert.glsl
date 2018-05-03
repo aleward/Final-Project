@@ -7,6 +7,7 @@
 //This simultaneous transformation allows your program to run much faster, especially when rendering
 //geometry with millions of vertices.
 
+uniform float u_Time;
 uniform mat4 u_Model;       // The matrix that defines the transformation of the
                             // object we're rendering. In this assignment,
                             // this will be the result of traversing your scene graph.
@@ -45,8 +46,15 @@ void main()
                                                             // perpendicular to the surface after the surface is transformed by
                                                             // the model matrix.
 
+    float height = 1.f - (vs_Pos.y + 40.f) / 40.f;
+    height = 1.f - sqrt(height);
+    vec2 direction = vec2(0.6, 0.8);
+    normalize(direction);
+    float weight = mix(0.0, (sin((u_Time * 0.01 + (vs_Pos.x * direction.x + vs_Pos.z * direction.y) * 0.2) * 2.5))*1.f, height);
 
-    vec4 modelposition = u_Model * vs_Pos;   // Temporarily store the transformed vertex positions for use below
+    vec4 newPos = vs_Pos * vec4(1.0, 1.0, 1.0, 1.0) + vec4(0.0, 0.0, weight * 4.f, 0.0);
+
+    vec4 modelposition = u_Model * newPos;   // Temporarily store the transformed vertex positions for use below
 
     fs_LightVec = lightPos - modelposition;  // Compute the direction in which the light source lies
 

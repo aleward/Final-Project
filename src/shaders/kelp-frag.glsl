@@ -126,19 +126,19 @@ void main()
                                                             //to simulate ambient lighting. This ensures that faces that are not
                                                             //lit by our point light are not completely black.
 
-        if (fs_Pos.y >= -41.f) {
-            float waterMove  = (sin((u_Time + 4.f) * 0.01) * 0.5 + 
-                                sin((u_Time + 4.f) * 0.02) * 0.3 + 
-                                sin((u_Time + 4.f) * 0.05) * 0.2 + 
-                                cos(((u_Time + 4.f) + 27.f) * 0.01) * 0.3) / 2.f;
-            float firstSamp = sqrt(sqrt(abs(snoise(vec3(fs_Pos.x, 0, fs_Pos.z) * (4.5f + waterMove) * 0.01))));
-            float secondSamp = sqrt(sqrt(abs(snoise((vec3(fs_Pos.x, 0, fs_Pos.z) + vec3(50, 0, 40)) * (1.5f + waterMove) * 0.05))));
-            float watText = firstSamp * secondSamp;
-            vec3 waterShine = vec3(min(diffuseColor.r * 1.4, 1.0),
-                                   min(diffuseColor.g * 1.4, 1.0),
-                                   min(diffuseColor.b * 1.55, 1.0));
-            diffuseColor.rgb = mix3(waterShine, diffuseColor.rgb, diffuseColor.rgb, watText);
-        }
+        if (fs_Pos.y >= -41.f) {}
+        
+        float waterMove  = (sin((u_Time + 4.f) * 0.01) * 0.5 + 
+                            sin((u_Time + 4.f) * 0.02) * 0.3 + 
+                            sin((u_Time + 4.f) * 0.05) * 0.2 + 
+                            cos(((u_Time + 4.f) + 27.f) * 0.01) * 0.3) / 2.f;
+        float firstSamp = sqrt(sqrt(abs(snoise(vec3(fs_Pos.x, 0, fs_Pos.z) * (4.5f + waterMove) * 0.01))));
+        float secondSamp = sqrt(sqrt(abs(snoise((vec3(fs_Pos.x, 0, fs_Pos.z) + vec3(50, 0, 40)) * (1.5f + waterMove) * 0.05))));
+        float watText = firstSamp * secondSamp;
+        vec3 waterShine = vec3(min(diffuseColor.r * 1.4, 1.0),
+                               min(diffuseColor.g * 1.4, 1.0),
+                               min(diffuseColor.b * 1.55, 1.0));
+        diffuseColor.rgb = mix3(waterShine, diffuseColor.rgb, diffuseColor.rgb, watText);
 
         // Compute final shaded color
         float mixVal = (length(fs_Pos.xz) / 200.f);

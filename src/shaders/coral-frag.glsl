@@ -112,7 +112,7 @@ vec3 mix3(vec3 v1, vec3 v2, vec3 v3, float f) {
 void main()
 {
     // Material base color (before shading)
-        vec4 diffuseColor = fs_Col;
+        vec4 diffuseColor = vec4((vec3(1, 1, 1) - sqrt(sqrt(vec3(1, 1, 1) - fs_Col.xyz))) * 2.f + 0.075, 1.0);
 
         // Calculate the diffuse term for Lambert shading
         float diffuseTerm = 0.5;

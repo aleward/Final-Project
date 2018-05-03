@@ -35,7 +35,12 @@ const vec4 lightPos = vec4(0, 50, 20, 1); //The position of our virtual light, w
 
 void main()
 {
-    fs_Col = vs_Col;                         // Pass the vertex colors to the fragment shader for interpolation
+    if (vs_Pos.y < -39.5) {
+        fs_Col = vs_Col;                         // Pass the vertex colors to the fragment shader for interpolation
+    } else {
+        fs_Col = vec4(213.f / 255.0, 124.f / 255.0, 255.f / 255.0, 1.0);
+    }
+    
     fs_Pos = vs_Pos;
 
     mat3 invTranspose = mat3(u_ModelInvTr);
