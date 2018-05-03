@@ -3,7 +3,13 @@ import * as Stats from 'stats-js';
 import * as DAT from 'dat-gui';
 //import * as p5 from '../p5/addons/p5.sound'
 import Square from './geometry/Square';
+import Cube from './geometry/Cube';
 import Ray from './geometry/Ray';
+import GodRays from './geometry/GodRays';
+import Kelp from './geometry/Kelp';
+import AllKelp from './geometry/AllKelp';
+import Coral from './geometry/Coral';
+import AllCoral from './geometry/AllCoral';
 import Plane from './geometry/Plane';
 import Particle from './geometry/Particle';
 import {Shape} from './Shape';
@@ -24,7 +30,14 @@ const controls = {
   'Camera Controls': 'Mouse',
   'Mode': 'Water'
 };
-let ray: Ray;
+
+let cube: Cube;
+let cor: Coral;
+
+let godrays: GodRays;
+let kelps: AllKelp;
+let coral: AllCoral;
+
 let black: Plane;
 let sand: Plane;
 let water: Plane;
@@ -36,9 +49,23 @@ let particles: Particle[] = [];
 // Deleted Chunk 1
 
 function loadScene() {
-  ray = new Ray(vec3.fromValues(0, 125, 0), 0, vec3.fromValues(0, -40, 0));
-  ray.create();
-  ray.setNumInstances(1);
+
+  cube = new Cube(vec3.fromValues(0, 0, 0));
+  cube.create();
+  cube.setNumInstances(1);
+
+  godrays = new GodRays(300);
+  kelps = new AllKelp(300);
+  coral = new AllCoral();
+
+  // cor = new Coral(vec3.fromValues(-50, -40, 0));
+  // cor.expGram();
+  // cor.expGram();
+  // cor.expGram();
+  // cor.expGram();
+  // cor.parseGram();
+  // cor.create();
+  // cor.setNumInstances(1);
 
   sand = new Plane(vec3.fromValues(0, -40, 0), 200);
   sand.addColors(new Float32Array([102 / 255, 114 / 255, 89 / 255, 1,
@@ -152,7 +179,7 @@ function main() {
   // Initial call to load scene
   loadScene();
 
-  const camera = new Camera(vec3.fromValues(-100, -10, 0), vec3.fromValues(0, 0, 0));
+  const camera = new Camera(vec3.fromValues(-100, -20, 0), vec3.fromValues(0, -30, 0));
 
   const renderer = new OpenGLRenderer(canvas);
   renderer.setClearColor(0, 0, 0, 1);
@@ -173,6 +200,16 @@ function main() {
   const waterShader = new ShaderProgram([
     new Shader(gl.VERTEX_SHADER, require('./shaders/water-vert.glsl')),
     new Shader(gl.FRAGMENT_SHADER, require('./shaders/water-frag.glsl')),
+  ]);
+
+  const kelpShader = new ShaderProgram([
+    new Shader(gl.VERTEX_SHADER, require('./shaders/kelp-vert.glsl')),
+    new Shader(gl.FRAGMENT_SHADER, require('./shaders/kelp-frag.glsl')),
+  ]);
+
+  const coralShader = new ShaderProgram([
+    new Shader(gl.VERTEX_SHADER, require('./shaders/coral-vert.glsl')),
+    new Shader(gl.FRAGMENT_SHADER, require('./shaders/coral-frag.glsl')),
   ]);
 
   // Takes the location of the mouse on the screen and adjusts it for world interaction
@@ -278,9 +315,14 @@ function main() {
     camera.update();
     
     stats.begin();
+
+    // Setting Times
     lambert.setTime(time);
     waterShader.setTime(time);
+    kelpShader.setTime(time);
+    coralShader.setTime(time);
     particleShader.setTime(time * 2);
+
     gl.viewport(0, 0, window.innerWidth, window.innerHeight);
 
     renderer.clear();
@@ -292,11 +334,16 @@ function main() {
     gl.enable(gl.DEPTH_TEST);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     renderer.render(camera, lambert, [
-      ray, sand, black,
+      sand, black,
     ]);
+    // kelp and coral shaders go here
+    renderer.render(camera, kelpShader, kelps.kelps);
+    renderer.render(camera, coralShader, coral.notes);
     renderer.render(camera, waterShader, [
       water,
     ]);
+    gl.blendFunc(gl.ONE, gl.ONE);
+    renderer.render(camera, lambert, godrays.rays);
     stats.end();
 
     // Update all particles

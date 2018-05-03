@@ -4,14 +4,14 @@ import {gl} from '../globals';
 import {Shape} from '../Shape';
 
 class Ray extends Drawable {
-    static ray: Shape = new Shape("ray.obj", 1);
+    static ray: Shape = new Shape("ray3.obj", 1);
     indices: number[] = [];//Uint32Array;
     positions: number[] = []; //Float32Array;
     normals: number[] = []; //Float32Array;
     colors: number[] = []; //Float32Array;
     center: vec4;
 
-    origS: number = 15;
+    origS: number = 10;
     origF: number = 7;
 
     end: vec3;
@@ -31,19 +31,24 @@ class Ray extends Drawable {
         this.center = vec4.fromValues(center[0], center[1], center[2], 1);
         
         this.startY = startY;
-        this.changedX = 0;
-        this.changedZ = 0;
+        this.changedX = (center[0] - end[0]) / 4 + end[0];
+        this.changedZ = (center[2] - end[2]) / 4 + end[2];
         this.end = end;
 
         this.lowA = 0.05;
         this.upA = 0.1;
 
-        this.r = 206 / 255;
-        this.g = 230 / 255;
-        this.b = 255 / 255;
+        //0, 56, 76
+        this.r = 40 / 255;//73 / 255;
+        this.g = 60 / 255;//81 / 255;//127 / 255;//174 / 255;
+        this.b = 70 / 255;//124 / 255;//191 / 255;//255 / 255;
     }
 
     create() {
+
+        for (let j = 0; j < Ray.ray.idx.length; j++) {
+            this.indices.push(Ray.ray.idx[j]);
+        }
 
         for (let j = 0; j < Ray.ray.norms.length; j += 3) {
             this.normals.push(Ray.ray.norms[j]);
@@ -55,28 +60,28 @@ class Ray extends Drawable {
         for (let j = 0; j < Ray.ray.pos.length; j += 3) {
             let y = Ray.ray.pos[j + 1];
 
-            this.colors.push(206 / 255.0);
-            this.colors.push(230 / 255.0);
-            this.colors.push(255 / 255.0);
+            this.colors.push(this.r);
+            this.colors.push(this.g);
+            this.colors.push(this.b);
 
             if (y > -0.2) {
-                this.colors.push(1.0);
+                this.colors.push(0.0125);
 
                 this.positions.push(Ray.ray.pos[j] * this.origF + this.changedX);
-                this.positions.push(this.startY);
+                this.positions.push(this.startY - 0.2);
                 this.positions.push(Ray.ray.pos[j + 2] * this.origS + this.changedZ);
                 this.positions.push(1.0);
             } else {
-                this.colors.push(1.0);
+                this.colors.push(0.00825);
 
                 this.positions.push(Ray.ray.pos[j] * this.origF + this.end[0]);
-                this.positions.push(this.end[1]);
+                this.positions.push(this.end[1] + 0.1);
                 this.positions.push(Ray.ray.pos[j + 2] * this.origS + this.end[2]);
                 this.positions.push(1.0);
             }
         }
 
-        let indc: Uint32Array = new Uint32Array(Ray.ray.idx);
+        let indc: Uint32Array = new Uint32Array(this.indices);
         let posit: Float32Array = new Float32Array(this.positions);
         let norms: Float32Array = new Float32Array(this.normals);
         let cols: Float32Array = new Float32Array(this.colors);
@@ -100,14 +105,6 @@ class Ray extends Drawable {
         gl.bufferData(gl.ARRAY_BUFFER, cols, gl.STATIC_DRAW);
 
         console.log(`Created ray`);
-        console.log("indx");
-        console.log(indc);
-        console.log("pos");
-        console.log(posit);
-        console.log("n");
-        console.log(norms);
-        console.log("c");
-        console.log(cols);
     }
 };
 
