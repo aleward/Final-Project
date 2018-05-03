@@ -13,7 +13,9 @@ export class Shape {
     mesh: any;
 
     // Values for the future VBO
-    pos: vec3[] = [];
+    pos: number[] = [];
+    norms: number[] = [];
+    idx: number[] = [];
 
     constructor(file: string, scale: number) {
         // Reads the obj from index.html
@@ -22,11 +24,16 @@ export class Shape {
         this.obj = document.getElementById(file).innerHTML;
         this.mesh = new OBJload.Mesh(this.obj);
 
+        // // The read in values:
+        // for (let i = 0; i < this.mesh.vertices.length; i+= 3) {
+        //     this.pos.push(vec3.fromValues(this.mesh.vertices[i] * scale,
+        //                                   this.mesh.vertices[i + 1] * scale,
+        //                                   this.mesh.vertices[i + 2] * scale));
+        // }
+
         // The read in values:
-        for (let i = 0; i < this.mesh.vertices.length; i+= 3) {
-            this.pos.push(vec3.fromValues(this.mesh.vertices[i] * scale,
-                                          this.mesh.vertices[i + 1] * scale,
-                                          this.mesh.vertices[i + 2] * scale));
-        }
+        this.pos = this.mesh.vertices;
+        this.norms = this.mesh.vertexNormals;
+        this.idx = this.mesh.indices;
     }
 }

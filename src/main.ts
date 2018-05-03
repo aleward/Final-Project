@@ -1,7 +1,10 @@
 import {vec2, vec3} from 'gl-matrix';
 import * as Stats from 'stats-js';
 import * as DAT from 'dat-gui';
+//import * as p5 from '../p5/addons/p5.sound'
 import Square from './geometry/Square';
+import Ray from './geometry/Ray';
+import Plane from './geometry/Plane';
 import Particle from './geometry/Particle';
 import {Shape} from './Shape';
 import OpenGLRenderer from './rendering/gl/OpenGLRenderer';
@@ -9,31 +12,56 @@ import Camera from './Camera';
 import {setGL} from './globals';
 import ShaderProgram, {Shader} from './rendering/gl/ShaderProgram';
 
+
+// SOUND FEATURES
+declare var uys7: any;
+declare var amp: any;
+declare var fft: any;
+
 // Define an object with application parameters and button callbacks
 // This will be referred to by dat.GUI's functions that add GUI elements.
 const controls = {
-  'Mouse Controls': 'Particle Motion',
-  'Shapes': 'None'
+  'Camera Controls': 'Mouse',
+  'Mode': 'Water'
 };
+let ray: Ray;
+let black: Plane;
+let sand: Plane;
+let water: Plane;
 
-let square: Square;
+let star: Square;
 let time: number = 0.0;
 let particles: Particle[] = [];
 
-let meshes: Shape[] = [];
-let mods: number[] = []
-let heart: Shape;
-let popplio: Shape;
-let wahoo: Shape;
-let cow: Shape;
-let greenWahoo: Shape;
-let rose: Shape;
-let sunflower: Shape;
-let apple: Shape;
+// Deleted Chunk 1
 
 function loadScene() {
-  square = new Square();
-  square.create();
+  ray = new Ray(vec3.fromValues(0, 125, 0), 0, vec3.fromValues(0, -40, 0));
+  ray.create();
+  ray.setNumInstances(1);
+
+  sand = new Plane(vec3.fromValues(0, -40, 0), 200);
+  sand.addColors(new Float32Array([102 / 255, 114 / 255, 89 / 255, 1,
+                                   102 / 255, 114 / 255, 89 / 255, 1,
+                                   102 / 255, 114 / 255, 89 / 255, 1,
+                                   102 / 255, 114 / 255, 89 / 255, 1]));
+  sand.create();
+  sand.setNumInstances(1);
+
+  black = new Plane(vec3.fromValues(0, -50, 0), 200);
+  black.addColors(new Float32Array([0, 0, 0, 1,
+                                   0, 0, 0, 1,
+                                   0, 0, 0, 1,
+                                   0, 0, 0, 1]));
+  black.create();
+  black.setNumInstances(1);
+
+  water = new Plane(vec3.fromValues(0, 0, 0), 200);
+  water.create();
+  water.setNumInstances(1);
+
+  star = new Square();
+  star.create();
 
   // PARTICLES
   let offsetsArray = [];
@@ -41,75 +69,43 @@ function loadScene() {
   // number of particles in each axis direction:
   let n: number = 25.0;
 
-  // Setting up the mesh values
-  heart = new Shape('heart.obj', 10);
-  popplio = new Shape('popplio.obj', 10);
-  wahoo = new Shape('wahoo.obj', 10);
-  greenWahoo = new Shape('greenWahoo.obj', 10);
-  cow = new Shape('cow.obj', 8);
-  rose = new Shape('rose.obj', 1);
-  sunflower = new Shape('sunflower.obj', 0.7);
-  apple = new Shape('apple.obj', 10);
-  meshes.push(heart);
-  meshes.push(popplio);
-  meshes.push(wahoo);
-  meshes.push(cow);
-  meshes.push(greenWahoo);
-  meshes.push(rose);
-  meshes.push(sunflower);
-  meshes.push(apple);
-
-  // Values that track which meshes effect which particles
-  for (let i = 0; i < meshes.length; i++) {
-    mods.push(Math.max(1, Math.floor((n * n * n) / meshes[i].pos.length)));
-  }
-  let count: number = 0;
+  // Deleted Chunk 2
 
   // Set up particles here.
-  for(let i = 3 * n; i > -3 * n; i -= 6) {
-    for(let j = -3 * n; j < 3 * n; j += 6) {
-      for(let k = -3 * n; k < 3 * n; k += 6) {
-        let particle = new Particle(vec3.fromValues(i, j, k));
-        
-        // The particle locations
-        offsetsArray.push(i);
-        offsetsArray.push(j);
-        offsetsArray.push(k);
+  let partNum: number = 0;
+  for(let i = 6 * n; i > -6 * n; i -= 12) {
+    for(let j = n; j < 6 * n; j += 12) {
+      for(let k = -6 * n; k < 6 * n; k += 12) {
+        if (Math.random() < j / (6 * n)) {
+          let particle = new Particle(vec3.fromValues(i, j, k));
+          
+          // The particle locations
+          offsetsArray.push(i);
+          offsetsArray.push(j);
+          offsetsArray.push(k);
 
-        // The particle colors
-        colorsArray.push(particle.r / 255);
-        colorsArray.push(particle.g / 255);
-        colorsArray.push(particle.b / 255);
-        colorsArray.push(1.0); // Alpha channel
+          // The particle colors
+          colorsArray.push(particle.r / 255);
+          colorsArray.push(particle.g / 255);
+          colorsArray.push(particle.b / 255);
+          colorsArray.push(1.0); // Alpha channel
 
-        // The meshes
-        for (let i = 0; i < meshes.length; i++) {
-          if (count % mods[i] == 0 && Math.floor(count / mods[i]) < meshes[i].pos.length) {
-            particle.isMesh[i] = true;
-            particle.meshPos[i] = meshes[i].pos[Math.floor(count / mods[i])];
-          } else {
-            if (mods[i] == 1) {
-              particle.isMesh[i] = true;
-              particle.meshPos[i] = vec3.fromValues(0, 0, 0);
-            } else {
-              particle.isMesh[i] = false;
-            }
-          }
+          // Deleted Chunk 3
+
+          particles.push(particle);
+          partNum++;
         }
-
-        particles.push(particle);
-        count++;
       }
     }
   }
   let offsets: Float32Array = new Float32Array(offsetsArray);
   let colors: Float32Array = new Float32Array(colorsArray);
-  square.setInstanceVBOs(offsets, colors);
-  square.setNumInstances(n * n * n); // 10x10 grid of "particles"
+  star.setInstanceVBOs(offsets, colors);
+  star.setNumInstances(partNum); // 10x10 grid of "particles"
 }
 
 // Function to update the particle VBO data
-function squareVBOUpdate() {
+function starVBOUpdate() {
   let offsetsArray = [];
   let colorsArray = [];
 
@@ -126,7 +122,7 @@ function squareVBOUpdate() {
 
   let offsets: Float32Array = new Float32Array(offsetsArray);
   let colors: Float32Array = new Float32Array(colorsArray);
-  square.setInstanceVBOs(offsets, colors);
+  star.setInstanceVBOs(offsets, colors);
 }
 
 function main() {
@@ -140,9 +136,8 @@ function main() {
 
   // Add controls to the gui
   const gui = new DAT.GUI();
-  var mouseOps = gui.add(controls, 'Mouse Controls', ['Camera', 'Particle Motion'] );
-  var shapeOps = gui.add(controls, 'Shapes', ['None', 'Heart', 'Apple', 'Rose', 
-                                              'Sunflower', 'Popplio', 'Wahoo', 'Green Wahoo'] );
+  var mouseOps = gui.add(controls, 'Camera Controls', ['Mouse', 'Music'] );
+  var modeOps = gui.add(controls, 'Mode', ['Water'] );
 
   // get canvas and webgl context
   const canvas = <HTMLCanvasElement> document.getElementById('canvas');
@@ -157,16 +152,27 @@ function main() {
   // Initial call to load scene
   loadScene();
 
-  const camera = new Camera(vec3.fromValues(-100, 10, 10), vec3.fromValues(5, 5, 0));
+  const camera = new Camera(vec3.fromValues(-100, -10, 0), vec3.fromValues(0, 0, 0));
 
   const renderer = new OpenGLRenderer(canvas);
   renderer.setClearColor(0, 0, 0, 1);
   gl.enable(gl.BLEND);
-  gl.blendFunc(gl.ONE, gl.ONE); // Additive blending
+  // gl.blendFunc(gl.ONE, gl.ONE); // Additive blending
+  // gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
-  const lambert = new ShaderProgram([
+  const particleShader = new ShaderProgram([
     new Shader(gl.VERTEX_SHADER, require('./shaders/particle-vert.glsl')),
     new Shader(gl.FRAGMENT_SHADER, require('./shaders/particle-frag.glsl')),
+  ]);
+
+  const lambert = new ShaderProgram([
+    new Shader(gl.VERTEX_SHADER, require('./shaders/lambert-vert.glsl')),
+    new Shader(gl.FRAGMENT_SHADER, require('./shaders/lambert-frag.glsl')),
+  ]);
+
+  const waterShader = new ShaderProgram([
+    new Shader(gl.VERTEX_SHADER, require('./shaders/water-vert.glsl')),
+    new Shader(gl.FRAGMENT_SHADER, require('./shaders/water-frag.glsl')),
   ]);
 
   // Takes the location of the mouse on the screen and adjusts it for world interaction
@@ -230,38 +236,32 @@ function main() {
     }
   }
 
-  mouseControl(); // first time
+  //mouseControl(); // first time
+  camera.controls.view.setUse(true);
   let time = 0;
+
+  // let printCount: number = 0;
 
   // This function will be called every frame
   function tick() {
-    // SHAPE OPTIONS
-    shapeOps.onChange(function(value: any) {
-      if (value == 'None') {
-        Particle.meshMode = -1;
-      } else if (value == 'Heart') {
-        Particle.meshMode = 0;
-      } else if (value == 'Popplio') {
-        Particle.meshMode = 1;
-      } else if (value == 'Wahoo') {
-        Particle.meshMode = 2;
-      } else if (value == 'Cow') {
-        Particle.meshMode = 3;
-      } else if (value == 'Green Wahoo') {
-        Particle.meshMode = 4;
-      } else if (value == 'Rose') {
-        Particle.meshMode = 5;
-      } else if (value == 'Sunflower') {
-        Particle.meshMode = 6;
-      } else if (value == 'Apple') {
-        Particle.meshMode = 7;
-      }
-    })
+    
+    // let check: boolean = typeof uys7 === 'undefined';
+    // if (!check && uys7.isLoaded() && (printCount < 500)) {
+    //   if (printCount > 480) {
+    //     console.log(fft.analyze());
+    //     console.log(amp.getLevel());
+    //   }
+    //   printCount++;
+    // }
+
+    // MODE OPTIONS
+    modeOps.onChange(function(value: any) {})
+    // Deleted Chunk 4
 
     // MOUSE OPTIONS
     mouseOps.onChange(function(value: any) {
 
-      if (value == 'Camera') {
+      if (value == 'Mouse') {
         camera.controls.view.setUse(true);
 
         // Resets these function values for camera mode
@@ -278,12 +278,24 @@ function main() {
     camera.update();
     
     stats.begin();
-    lambert.setTime(time++);
+    lambert.setTime(time);
+    waterShader.setTime(time);
+    particleShader.setTime(time * 2);
     gl.viewport(0, 0, window.innerWidth, window.innerHeight);
 
     renderer.clear();
+    gl.disable(gl.DEPTH_TEST);
+    gl.blendFunc(gl.ONE, gl.ONE);
+    renderer.render(camera, particleShader, [
+      star,
+    ]);
+    gl.enable(gl.DEPTH_TEST);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     renderer.render(camera, lambert, [
-      square,
+      ray, sand, black,
+    ]);
+    renderer.render(camera, waterShader, [
+      water,
     ]);
     stats.end();
 
@@ -291,7 +303,7 @@ function main() {
     for (let i = 0; i < particles.length; i++) {
       particles[i].setVals(time);
     }
-    squareVBOUpdate();
+    starVBOUpdate();
 
     time = time + 1;
 

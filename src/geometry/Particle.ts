@@ -15,8 +15,8 @@ class Particle {
     
     // Colors
     r: number = 255;
-    g: number = 0;
-    b: number = 0;
+    g: number = 255; //0;
+    b: number = 255; //0;
 
     // Mesh attributes
     static meshMode: number = -1;
@@ -40,8 +40,10 @@ class Particle {
 
         this.offset = Math.random();
 
-        // increment the color changes more the further the particle is from the center
-        for (let i = 0; i < vec3.length(pos) * 4; i++) {
+        // dims more the further the particle is from the center
+        let additional: number = 0;
+        if (pos[1] < 40) {additional = (15 - pos[1] + 25) * 4;} // dims stars closer to the water
+        for (let i = 0; i < vec3.length(vec3.fromValues(pos[0], pos[1] - 40, pos[2])) + additional; i++) {
             this.colChange();
         }
     }
@@ -172,22 +174,28 @@ class Particle {
             }
         }
         
-        this.colChange();
+        //this.colChange();
     }
 
     // Causes the rainbow shift in colors!
     colChange() {
         // RGB Color fade Algorithm by Codepixl
-        if(this.r > 0 && this.b == 0){
+        // if(this.r > 0 && this.b == 0){
+        //     this.r--;
+        //     this.g++;
+        // }
+        // if(this.g > 0 && this.r == 0){
+        //     this.g--;
+        //     this.b++;
+        // }
+        // if(this.b > 0 && this.g == 0){
+        //     this.r++;
+        //     this.b--;
+        // }
+
+        if (this.r > 60) {
             this.r--;
-            this.g++;
-        }
-        if(this.g > 0 && this.r == 0){
             this.g--;
-            this.b++;
-        }
-        if(this.b > 0 && this.g == 0){
-            this.r++;
             this.b--;
         }
     }
