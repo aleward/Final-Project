@@ -31,6 +31,7 @@ class ShaderProgram {
   unifViewProj: WebGLUniformLocation;
   unifCameraAxes: WebGLUniformLocation;
   unifTime: WebGLUniformLocation;
+  unifAlpha: WebGLUniformLocation;
 
   constructor(shaders: Array<Shader>) {
     this.prog = gl.createProgram();
@@ -50,8 +51,9 @@ class ShaderProgram {
     this.unifModel      = gl.getUniformLocation(this.prog, "u_Model");
     this.unifModelInvTr = gl.getUniformLocation(this.prog, "u_ModelInvTr");
     this.unifViewProj   = gl.getUniformLocation(this.prog, "u_ViewProj");
-    this.unifCameraAxes      = gl.getUniformLocation(this.prog, "u_CameraAxes");
-    this.unifTime      = gl.getUniformLocation(this.prog, "u_Time");
+    this.unifCameraAxes = gl.getUniformLocation(this.prog, "u_CameraAxes");
+    this.unifTime       = gl.getUniformLocation(this.prog, "u_Time");
+    this.unifAlpha      = gl.getUniformLocation(this.prog, "u_Alpha");
   }
 
   use() {
@@ -93,6 +95,13 @@ class ShaderProgram {
     this.use();
     if (this.unifTime !== -1) {
       gl.uniform1f(this.unifTime, t);
+    }
+  }
+
+  setAlph(a: number) {
+    this.use();
+    if (this.unifAlpha !== -1) {
+      gl.uniform1f(this.unifAlpha, a);
     }
   }
 

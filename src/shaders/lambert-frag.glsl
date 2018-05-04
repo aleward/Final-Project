@@ -13,6 +13,7 @@ precision highp float;
 
 uniform vec4 u_Color; // The color with which to render this instance of geometry.
 uniform float u_Time;
+uniform float u_Alpha;
 
 // These are the interpolated values out of the rasterizer, so you can't know
 // their specific values without knowing the vertices that contributed to them
@@ -114,6 +115,7 @@ void main()
     // Material base color (before shading)
         vec4 diffuseColor = fs_Col;
 
+        bool ifRay = true;
         // Calculate the diffuse term for Lambert shading
         float diffuseTerm = 0.5;
         if (diffuseColor.a > 0.1) {
@@ -121,7 +123,10 @@ void main()
           // Avoid negative lighting values
           diffuseTerm = min(diffuseTerm, 1.0);
           diffuseTerm = max(diffuseTerm, 0.0);
+          ifRay = false;
         }
+
+        if (ifRay) { diffuseTerm = u_Alpha; }
 
         float ambientTerm = 0.2;
 

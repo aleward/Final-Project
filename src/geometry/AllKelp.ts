@@ -17,8 +17,10 @@ class AllKelp {
 
         for (let i = -200; i <= 200; i+=10) {
             for (let j = -200; j <= 200; j+=10) {
+                // dist value to make Kelp more likely along the fringes and less in the center
                 let dist = Math.sqrt(i * i + j * j);
                 let currNoise = n.snoise(vec3.fromValues(i + 40, -50, j - 100)) / 100000000000;
+                // check n set
                 if (currNoise - (amount / 2 - dist * 2) > amount) {
                     let kelp = new Kelp(vec3.fromValues(i, -40, j), 10);
                     for (let i = 0; i < 2 + Math.random() * 2; i ++) {

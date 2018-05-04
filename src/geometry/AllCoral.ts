@@ -7,15 +7,17 @@ import {Noise} from '../Noise';
 
 class AllCoral {
 
+    //Stores all 12 coral clusters that chorespond to notes
     notes: Coral[] = [];
 
-    // note type
+    // note type - true = white, false = black
     bOrW: boolean[] = [true, false, true, false, true, true, false, true, false, true, false, true];
 
     constructor() {
         /* Hard codes "note" positions */
 
         for (let i = -5.5; i < 6; i++) {
+            // Shifts position forward if a white key
             let whiteShift: number = 0;
             if (this.bOrW[i + 5.5]) { whiteShift = -10; }
 

@@ -80,22 +80,9 @@ export class KelpRule {
         this.expansions.Add("F", "F");
         this.expansions.Add("T", "T");
         // Add rotations
-
-        // // Branches
-        // this.expansions.Add("F", "F[RM&-F&-F^F^+F^[++&FFL[MM^FF&FML++LM]]^FLM]");
-        // //Leaves
-        // this.expansions.Add("L", "L");
-        // // Manipulates turtle direction
         // this.expansions.Add("+", "+");
-        // this.expansions.Add("-", "-");
-        // this.expansions.Add("&", "&");
-        // this.expansions.Add("^", "^");
-        // // Turtle stack adjustments
-        // this.expansions.Add("[", "[");
-        // this.expansions.Add("]", "]");
-        // // Randomized adjustments
-        // this.expansions.Add("R", "R");
-        // this.expansions.Add("M", "M");
+        // this.expansions.Add("-", "-"); Smoother kelp if i comment it out - hm!
+
     }
 
     expand(s : string): string { // adjust for array of strings
@@ -198,8 +185,6 @@ class Kelp extends Drawable {
 
     // The sample VBO
     piece: SimplePiece = new SimplePiece();
-    // trunk : any; //Shape = new Shape('trunk.obj');
-    leaf : any;//Shape = new Shape('leaf.obj');
 
     constructor(center: vec3, angle: number) {
         super(); // Call the constructor of the super class. This is required.

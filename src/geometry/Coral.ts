@@ -145,10 +145,6 @@ class Coral extends Drawable {
                 
                 numIDX += this.piece.norms.length / 3;
 
-            // CHANGES MAGNITUTE OF SEGMENT WIDTH
-            } else if (this.grammar[i] == "W") {
-                turt.width = Math.random() * 2 + 3;
-
             // SHIFTS TURTLE OUTWARD
             } else if (this.grammar[i] == "<") {
                 turt.shift = vec3.fromValues(0, 0, turt.shift[2] + 1.5 /*/ Math.sqrt(turt.depth)*/ * this.size);
@@ -160,7 +156,6 @@ class Coral extends Drawable {
                 let rotNum: number = (Math.random() * 360);
                 rotNum *= Math.PI / 180
 
-                //mat4.rotateY(newDir, turt.dir, rotNum);
                 mat4.rotate(newDir, turt.turn, rotNum, vec3.fromValues(turt.dir[4], turt.dir[5], turt.dir[6]));
                 turt.turn = newDir;
 
