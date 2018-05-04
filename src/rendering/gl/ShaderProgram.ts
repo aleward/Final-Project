@@ -25,6 +25,7 @@ class ShaderProgram {
   attrNor: number;
   attrCol: number; // This time, it's an instanced rendering attribute, so each particle can have a unique color. Not per-vertex, but per-instance.
   attrTranslate: number; // Used in the vertex shader during instanced rendering to offset the vertex positions to the particle's drawn position.
+  attrNote: number; // Used only for coral, to tell notes apart in shader
 
   unifModel: WebGLUniformLocation;
   unifModelInvTr: WebGLUniformLocation;
@@ -32,6 +33,7 @@ class ShaderProgram {
   unifCameraAxes: WebGLUniformLocation;
   unifTime: WebGLUniformLocation;
   unifAlpha: WebGLUniformLocation;
+  unifNoteWeight: WebGLUniformLocation;
 
   constructor(shaders: Array<Shader>) {
     this.prog = gl.createProgram();
@@ -48,12 +50,15 @@ class ShaderProgram {
     this.attrNor = gl.getAttribLocation(this.prog, "vs_Nor");
     this.attrCol = gl.getAttribLocation(this.prog, "vs_Col");
     this.attrTranslate = gl.getAttribLocation(this.prog, "vs_Translate");
+    this.attrNote = gl.getAttribLocation(this.prog, "vs_Note");
     this.unifModel      = gl.getUniformLocation(this.prog, "u_Model");
     this.unifModelInvTr = gl.getUniformLocation(this.prog, "u_ModelInvTr");
     this.unifViewProj   = gl.getUniformLocation(this.prog, "u_ViewProj");
     this.unifCameraAxes = gl.getUniformLocation(this.prog, "u_CameraAxes");
     this.unifTime       = gl.getUniformLocation(this.prog, "u_Time");
     this.unifAlpha      = gl.getUniformLocation(this.prog, "u_Alpha");
+    this.unifNoteWeight = gl.getUniformLocation(this.prog, "u_Notes");
+
   }
 
   use() {
@@ -105,6 +110,13 @@ class ShaderProgram {
     }
   }
 
+  setNotes(n: number[]) {
+    this.use();
+    if (this.unifNoteWeight !== -1) {
+      gl.uniform1fv(this.unifNoteWeight, n);
+    }
+  }
+
   draw(d: Drawable) {
     this.use();
 
@@ -129,6 +141,12 @@ class ShaderProgram {
       gl.enableVertexAttribArray(this.attrTranslate);
       gl.vertexAttribPointer(this.attrTranslate, 3, gl.FLOAT, false, 0, 0);
       gl.vertexAttribDivisor(this.attrTranslate, 1); // Advance 1 index in translate VBO for each drawn instance
+    }
+
+    if (this.attrNote != -1 && d.bindNote()) {
+      gl.enableVertexAttribArray(this.attrNote);
+      gl.vertexAttribPointer(this.attrNote, 1, gl.FLOAT, false, 0, 0);
+      gl.vertexAttribDivisor(this.attrNote, 1); // Advance 1 index in col VBO for each drawn instance
     }
 
     d.bindIdx();

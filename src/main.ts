@@ -21,15 +21,26 @@ import ShaderProgram, {Shader} from './rendering/gl/ShaderProgram';
 
 // SOUND FEATURES
 declare var uys7: any;
+declare var hyena: any;
+declare var tuning: any;
+declare var chord: any;
+declare var tone: any;
+
 declare var amp: any;
 declare var fft: any;
+declare var noteFFT: any;
+declare var starFFT: any;
+
+let currSound: any;
+let notSet: boolean = true;
 // declare var peaks: any;
 
 // Define an object with application parameters and button callbacks
 // This will be referred to by dat.GUI's functions that add GUI elements.
 const controls = {
   'Camera Controls': 'Mouse',
-  'Mode': 'Water'
+  'Mode': 'Water',
+  'Music': 'UYS'
 };
 
 // Arrays for each feature type
@@ -90,7 +101,7 @@ function loadScene() {
   let partNum: number = 0;
   for(let i = 6 * n; i > -6 * n; i -= 12) {
     for(let j = n; j < 6 * n; j += 12) {
-      for(let k = -6 * n; k < 6 * n; k += 12) {
+      for(let k = -6 * n; k < 6 * n; k += 9) {
         if (Math.random() < j / (6 * n)) {
           let particle = new Particle(vec3.fromValues(i, j, k));
           
@@ -153,6 +164,7 @@ function main() {
   const gui = new DAT.GUI();
   var mouseOps = gui.add(controls, 'Camera Controls', ['Mouse', 'Music'] );
   var modeOps = gui.add(controls, 'Mode', ['Water', 'Stars'] );
+  var songOps = gui.add(controls, 'Music', ['UYS', 'Hyena by Sam Gellaitry', 'Guitar Tuning', 'Plain Chord', 'Dial Tone'] );
 
   // get canvas and webgl context
   const canvas = <HTMLCanvasElement> document.getElementById('canvas');
@@ -265,33 +277,112 @@ function main() {
   camera.controls.view.setUse(true);
   let time = 0;
 
-  // let printCount: number = 0;
+  // Frequencies for equal-tempered scale at the lowest octave:
+  let baseFreq: number [] = [16.35, 17.32, 18.35, 19.45, 
+                             20.60, 21.83, 23.12, 24.50, 
+                             25.96, 27.50, 29.14, 30.87];
+  // Analyzes the frequencies for each note at each octave
+  function noteMap(fftAnalyze: number[], noteA: number[]) {
+    for (let i = 0; i < 12; i++) {
+      noteA[i] = 0.5;
+    }
+    let multiplier = 1;
+    let divisors: number [] = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
+    for (let i = 0; i < 8; i++) {
+      for (let j = 0; j < 12; j++) {
+        let val = noteFFT.getEnergy(baseFreq[j] * multiplier);
+        // let plus = 0;
+        // if (i > 0) { plus = (i / 20) * (i / 20); }
+        if (val > 30) { divisors[j] += (0.5 - (i / 20) * (i / 20)); }
+        noteA[j] += val / 255;
+      }
+      multiplier *= 2;
+    }
+    for (let i = 0; i < 12; i++) {
+      noteA[i] /= divisors[i];
+    }
+  }
+
+  let printCount: number = 0;
 
   // This function will be called every frame
   function tick() {
     
+    // KELP AND GOD RAY COLOR WARP---
     let lFreq: number = 0.5;
     let hFreq: number = 1;
 
-    let check: boolean = typeof uys7 === 'undefined';
-    // let checkPeak: boolean = typeof peaks === 'undefined';
-    if (!check && uys7.isLoaded()) {
-      let spectrum = fft.analyze();
+    let noteAmp: number[] = [];
 
-      let lTot = 0;
-      let rTot = 0;
-      for (let i = 5; i < 15; i++) {
-        lTot += spectrum[i];
+    if(notSet) {
+      let check: boolean = typeof uys7 === 'undefined';
+      // let checkPeak: boolean = typeof peaks === 'undefined';
+      if (!check && uys7.isLoaded() && uys7.isPlaying()) {
+        currSound = uys7;
+        notSet = false;
       }
-      for (let i = 1; i < 15; i++) {
-        rTot += spectrum[spectrum.length - i];
+      noteAmp = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
+    }
+
+    if(!notSet) {
+      songOps.onChange(function(value: any) {
+        if (value == 'UYS') {
+          currSound.stop();
+          currSound = uys7;
+          currSound.loop();
+        } else if (value == 'Hyena by Sam Gellaitry') {
+          currSound.stop();
+          currSound = hyena;
+          currSound.loop();
+        } else if (value == 'Guitar Tuning') {
+          currSound.stop();
+          currSound = tuning;
+          currSound.loop();
+        } else if (value == 'Plain Chord') {
+          currSound.stop();
+          currSound = chord;
+          currSound.loop();
+        } else if (value == 'Dial Tone') {
+          currSound.stop();
+          currSound = tone;
+          currSound.loop();
+        } 
+      })
+
+      let check: boolean = typeof currSound === 'undefined';
+      // let checkPeak: boolean = typeof peaks === 'undefined';
+      if (!check && currSound.isLoaded() && currSound.isPlaying()) {
+        let spectrum = fft.analyze();
+
+        //God ray
+        let lTot = 0;
+        for (let i = 5; i < 15; i++) {
+          lTot += spectrum[i];
+        }
+        lFreq = Math.max(lTot / (10 * 255) * 1.3 - 0.2, 0);
+        //Kelp
+        let rTot = 0;
+        for (let i = 1; i < 15; i++) {
+          rTot += spectrum[spectrum.length - i];
+        }
+        hFreq = rTot / (14 * 255)* 1.7 + 0.65;
+
+        // Notes
+        let noteSpec = noteFFT.analyze();
+        noteMap(noteSpec, noteAmp);
+
+        Particle.FFT = starFFT.analyze();
+      } else {
+        noteAmp = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
       }
-      lFreq = Math.max(lTot / (10 * 255) * 1.3 - 0.2, 0);
-      hFreq = rTot / (14 * 255)* 1.7 + 0.65;
     }
 
     lambert.setAlph(lFreq);
     kelpShader.setAlph(hFreq);
+    //-------------------------------
+
+    coralShader.setNotes(noteAmp);
+    
 
     // MODE OPTIONS
     modeOps.onChange(function(value: any) {})

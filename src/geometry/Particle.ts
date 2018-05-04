@@ -5,6 +5,7 @@ import {vec2, vec3, vec4} from 'gl-matrix';
  * CIS 566 */ 
 
 class Particle {
+    static FFT: any;
     orig: vec3; // original point
     pos: vec3;  // position to draw at
     vel: vec3;  // velocity
@@ -172,6 +173,13 @@ class Particle {
                                         clickVal[1] + change[1], 
                                         clickVal[2] + change[2]);
             }
+        }
+
+        // FFT changes
+        if (!(typeof Particle.FFT === 'undefined')) {
+            let z = (this.orig[2] + 6 * 25) / 9;
+            this.pos[1] = this.pos[1] * (255 - Particle.FFT[z]) / 255;
+            //console.log(z);
         }
         
         //this.colChange();

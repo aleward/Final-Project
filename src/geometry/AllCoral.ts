@@ -22,7 +22,7 @@ class AllCoral {
             if (this.bOrW[i + 5.5]) { whiteShift = -10; }
 
             let note: Coral = new Coral(vec3.fromValues(-50 - Math.abs((i + 1) * 1.4) + whiteShift, 
-                                                        -40, i * 5 + i * (10 + whiteShift) / 10));
+                                                        -40, i * 5 + i * (10 + whiteShift) / 10), i + 5.5);
 
             for (let i = 0; i < 3 + Math.random() * 3; i ++) {
                 note.expGram();

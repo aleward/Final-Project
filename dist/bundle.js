@@ -231,6 +231,7 @@ class Drawable {
         this.norGenerated = false;
         this.colGenerated = false;
         this.translateGenerated = false;
+        this.noteGenerated = false;
         this.numInstances = 0; // How many instances of this Drawable the shader program should draw
     }
     destory() {
@@ -239,6 +240,7 @@ class Drawable {
         __WEBPACK_IMPORTED_MODULE_0__globals__["a" /* gl */].deleteBuffer(this.bufNor);
         __WEBPACK_IMPORTED_MODULE_0__globals__["a" /* gl */].deleteBuffer(this.bufCol);
         __WEBPACK_IMPORTED_MODULE_0__globals__["a" /* gl */].deleteBuffer(this.bufTranslate);
+        __WEBPACK_IMPORTED_MODULE_0__globals__["a" /* gl */].deleteBuffer(this.bufNote);
     }
     generateIdx() {
         this.idxGenerated = true;
@@ -259,6 +261,10 @@ class Drawable {
     generateTranslate() {
         this.translateGenerated = true;
         this.bufTranslate = __WEBPACK_IMPORTED_MODULE_0__globals__["a" /* gl */].createBuffer();
+    }
+    generateNote() {
+        this.noteGenerated = true;
+        this.bufNote = __WEBPACK_IMPORTED_MODULE_0__globals__["a" /* gl */].createBuffer();
     }
     bindIdx() {
         if (this.idxGenerated) {
@@ -289,6 +295,12 @@ class Drawable {
             __WEBPACK_IMPORTED_MODULE_0__globals__["a" /* gl */].bindBuffer(__WEBPACK_IMPORTED_MODULE_0__globals__["a" /* gl */].ARRAY_BUFFER, this.bufTranslate);
         }
         return this.translateGenerated;
+    }
+    bindNote() {
+        if (this.noteGenerated) {
+            __WEBPACK_IMPORTED_MODULE_0__globals__["a" /* gl */].bindBuffer(__WEBPACK_IMPORTED_MODULE_0__globals__["a" /* gl */].ARRAY_BUFFER, this.bufNote);
+        }
+        return this.noteGenerated;
     }
     elemCount() {
         return this.count;
@@ -3869,12 +3881,15 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 
 
 
+let currSound;
+let notSet = true;
 // declare var peaks: any;
 // Define an object with application parameters and button callbacks
 // This will be referred to by dat.GUI's functions that add GUI elements.
 const controls = {
     'Camera Controls': 'Mouse',
-    'Mode': 'Water'
+    'Mode': 'Water',
+    'Music': 'UYS'
 };
 // Arrays for each feature type
 let godrays;
@@ -3923,7 +3938,7 @@ function loadScene() {
     let partNum = 0;
     for (let i = 6 * n; i > -6 * n; i -= 12) {
         for (let j = n; j < 6 * n; j += 12) {
-            for (let k = -6 * n; k < 6 * n; k += 12) {
+            for (let k = -6 * n; k < 6 * n; k += 9) {
                 if (Math.random() < j / (6 * n)) {
                     let particle = new __WEBPACK_IMPORTED_MODULE_8__geometry_Particle__["a" /* default */](__WEBPACK_IMPORTED_MODULE_0_gl_matrix__["d" /* vec3 */].fromValues(i, j, k));
                     // The particle locations
@@ -3976,6 +3991,7 @@ function main() {
     const gui = new __WEBPACK_IMPORTED_MODULE_2_dat_gui__["GUI"]();
     var mouseOps = gui.add(controls, 'Camera Controls', ['Mouse', 'Music']);
     var modeOps = gui.add(controls, 'Mode', ['Water', 'Stars']);
+    var songOps = gui.add(controls, 'Music', ['UYS', 'Hyena by Sam Gellaitry', 'Guitar Tuning', 'Plain Chord', 'Dial Tone']);
     // get canvas and webgl context
     const canvas = document.getElementById('canvas');
     const gl = canvas.getContext('webgl2');
@@ -4069,28 +4085,106 @@ function main() {
     //mouseControl(); // first time
     camera.controls.view.setUse(true);
     let time = 0;
-    // let printCount: number = 0;
+    // Frequencies for equal-tempered scale at the lowest octave:
+    let baseFreq = [16.35, 17.32, 18.35, 19.45,
+        20.60, 21.83, 23.12, 24.50,
+        25.96, 27.50, 29.14, 30.87];
+    // Analyzes the frequencies for each note at each octave
+    function noteMap(fftAnalyze, noteA) {
+        for (let i = 0; i < 12; i++) {
+            noteA[i] = 0.5;
+        }
+        let multiplier = 1;
+        let divisors = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
+        for (let i = 0; i < 8; i++) {
+            for (let j = 0; j < 12; j++) {
+                let val = noteFFT.getEnergy(baseFreq[j] * multiplier);
+                // let plus = 0;
+                // if (i > 0) { plus = (i / 20) * (i / 20); }
+                if (val > 30) {
+                    divisors[j] += (0.5 - (i / 20) * (i / 20));
+                }
+                noteA[j] += val / 255;
+            }
+            multiplier *= 2;
+        }
+        for (let i = 0; i < 12; i++) {
+            noteA[i] /= divisors[i];
+        }
+    }
+    let printCount = 0;
     // This function will be called every frame
     function tick() {
+        // KELP AND GOD RAY COLOR WARP---
         let lFreq = 0.5;
         let hFreq = 1;
-        let check = typeof uys7 === 'undefined';
-        // let checkPeak: boolean = typeof peaks === 'undefined';
-        if (!check && uys7.isLoaded()) {
-            let spectrum = fft.analyze();
-            let lTot = 0;
-            let rTot = 0;
-            for (let i = 5; i < 15; i++) {
-                lTot += spectrum[i];
+        let noteAmp = [];
+        if (notSet) {
+            let check = typeof uys7 === 'undefined';
+            // let checkPeak: boolean = typeof peaks === 'undefined';
+            if (!check && uys7.isLoaded() && uys7.isPlaying()) {
+                currSound = uys7;
+                notSet = false;
             }
-            for (let i = 1; i < 15; i++) {
-                rTot += spectrum[spectrum.length - i];
+            noteAmp = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
+        }
+        if (!notSet) {
+            songOps.onChange(function (value) {
+                if (value == 'UYS') {
+                    currSound.stop();
+                    currSound = uys7;
+                    currSound.loop();
+                }
+                else if (value == 'Hyena by Sam Gellaitry') {
+                    currSound.stop();
+                    currSound = hyena;
+                    currSound.loop();
+                }
+                else if (value == 'Guitar Tuning') {
+                    currSound.stop();
+                    currSound = tuning;
+                    currSound.loop();
+                }
+                else if (value == 'Plain Chord') {
+                    currSound.stop();
+                    currSound = chord;
+                    currSound.loop();
+                }
+                else if (value == 'Dial Tone') {
+                    currSound.stop();
+                    currSound = tone;
+                    currSound.loop();
+                }
+            });
+            let check = typeof currSound === 'undefined';
+            // let checkPeak: boolean = typeof peaks === 'undefined';
+            if (!check && currSound.isLoaded() && currSound.isPlaying()) {
+                let spectrum = fft.analyze();
+                //God ray
+                let lTot = 0;
+                for (let i = 5; i < 15; i++) {
+                    lTot += spectrum[i];
+                }
+                lFreq = Math.max(lTot / (10 * 255) * 1.3 - 0.2, 0);
+                //Kelp
+                let rTot = 0;
+                for (let i = 1; i < 15; i++) {
+                    rTot += spectrum[spectrum.length - i];
+                }
+                hFreq = rTot / (14 * 255) * 1.7 + 0.65;
+                // Notes
+                let noteSpec = noteFFT.analyze();
+                noteMap(noteSpec, noteAmp);
+                __WEBPACK_IMPORTED_MODULE_8__geometry_Particle__["a" /* default */].FFT = starFFT.analyze();
             }
-            lFreq = Math.max(lTot / (10 * 255) * 1.3 - 0.2, 0);
-            hFreq = rTot / (14 * 255) * 1.7 + 0.65;
+            else {
+                noteAmp = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
+            }
         }
         lambert.setAlph(lFreq);
         kelpShader.setAlph(hFreq);
+        //-------------------------------
+        coralShader.setNotes(noteAmp);
         // MODE OPTIONS
         modeOps.onChange(function (value) { });
         // Deleted Chunk 4
@@ -12888,7 +12982,7 @@ class AllCoral {
             if (this.bOrW[i + 5.5]) {
                 whiteShift = -10;
             }
-            let note = new __WEBPACK_IMPORTED_MODULE_1__Coral__["a" /* default */](__WEBPACK_IMPORTED_MODULE_0_gl_matrix__["d" /* vec3 */].fromValues(-50 - Math.abs((i + 1) * 1.4) + whiteShift, -40, i * 5 + i * (10 + whiteShift) / 10));
+            let note = new __WEBPACK_IMPORTED_MODULE_1__Coral__["a" /* default */](__WEBPACK_IMPORTED_MODULE_0_gl_matrix__["d" /* vec3 */].fromValues(-50 - Math.abs((i + 1) * 1.4) + whiteShift, -40, i * 5 + i * (10 + whiteShift) / 10), i + 5.5);
             for (let i = 0; i < 3 + Math.random() * 3; i++) {
                 note.expGram();
             }
@@ -12948,7 +13042,7 @@ class CoralRule {
 
 // MY KELP!! thing
 class Coral extends __WEBPACK_IMPORTED_MODULE_1__rendering_gl_Drawable__["a" /* default */] {
-    constructor(center) {
+    constructor(center, note) {
         super(); // Call the constructor of the super class. This is required.
         // VBO information
         this.indices = [];
@@ -12962,6 +13056,7 @@ class Coral extends __WEBPACK_IMPORTED_MODULE_1__rendering_gl_Drawable__["a" /* 
         this.size = 1;
         // First point in kelp
         this.center = center;
+        this.note = note;
     }
     // Function to expand the currently stored grammar
     expGram() {
@@ -13003,8 +13098,8 @@ class Coral extends __WEBPACK_IMPORTED_MODULE_1__rendering_gl_Drawable__["a" /* 
                 }
                 for (let j = 0; j < this.piece.norms.length; j += 3) {
                     let currNorm = __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["e" /* vec4 */].fromValues(this.piece.norms[j], this.piece.norms[j + 1], this.piece.norms[j + 2], 0);
-                    __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["e" /* vec4 */].transformMat4(currNorm, currNorm, turt.turn);
-                    __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["e" /* vec4 */].transformMat4(currNorm, currNorm, turt.dir);
+                    //vec4.transformMat4(currNorm, currNorm, turt.turn);
+                    //vec4.transformMat4(currNorm, currNorm, turt.dir);
                     this.normals.push(currNorm[0]);
                     this.normals.push(currNorm[1]);
                     this.normals.push(currNorm[2]);
@@ -13022,7 +13117,7 @@ class Coral extends __WEBPACK_IMPORTED_MODULE_1__rendering_gl_Drawable__["a" /* 
                     this.colors.push(103 / 255.0);
                     this.colors.push(63 / 255.0);
                     this.colors.push(168 / 255.0);
-                    this.colors.push(1.0);
+                    this.colors.push(this.note / 12);
                 }
                 turt.updateDepth(turt.depth + 1);
                 numIDX += this.piece.norms.length / 3;
@@ -13054,10 +13149,16 @@ class Coral extends __WEBPACK_IMPORTED_MODULE_1__rendering_gl_Drawable__["a" /* 
         var finalPositions = new Float32Array(this.positions);
         var finalNormals = new Float32Array(this.normals);
         var finalColors = new Float32Array(this.colors);
+        // let nums: number[] = [];
+        // for (let i = 0; i < finalPositions.length / 4; i++) {
+        //     nums.push(this.note);
+        // }
+        // var noteNums: Float32Array = new Float32Array(nums);
         this.generateIdx();
         this.generatePos();
         this.generateNor();
         this.generateCol();
+        // this.generateNote();
         this.count = this.indices.length;
         __WEBPACK_IMPORTED_MODULE_2__globals__["a" /* gl */].bindBuffer(__WEBPACK_IMPORTED_MODULE_2__globals__["a" /* gl */].ELEMENT_ARRAY_BUFFER, this.bufIdx);
         __WEBPACK_IMPORTED_MODULE_2__globals__["a" /* gl */].bufferData(__WEBPACK_IMPORTED_MODULE_2__globals__["a" /* gl */].ELEMENT_ARRAY_BUFFER, finalIndices, __WEBPACK_IMPORTED_MODULE_2__globals__["a" /* gl */].STATIC_DRAW);
@@ -13067,6 +13168,8 @@ class Coral extends __WEBPACK_IMPORTED_MODULE_1__rendering_gl_Drawable__["a" /* 
         __WEBPACK_IMPORTED_MODULE_2__globals__["a" /* gl */].bufferData(__WEBPACK_IMPORTED_MODULE_2__globals__["a" /* gl */].ARRAY_BUFFER, finalPositions, __WEBPACK_IMPORTED_MODULE_2__globals__["a" /* gl */].STATIC_DRAW);
         __WEBPACK_IMPORTED_MODULE_2__globals__["a" /* gl */].bindBuffer(__WEBPACK_IMPORTED_MODULE_2__globals__["a" /* gl */].ARRAY_BUFFER, this.bufCol);
         __WEBPACK_IMPORTED_MODULE_2__globals__["a" /* gl */].bufferData(__WEBPACK_IMPORTED_MODULE_2__globals__["a" /* gl */].ARRAY_BUFFER, finalColors, __WEBPACK_IMPORTED_MODULE_2__globals__["a" /* gl */].STATIC_DRAW);
+        // gl.bindBuffer(gl.ARRAY_BUFFER, this.bufNote);
+        // gl.bufferData(gl.ARRAY_BUFFER, noteNums, gl.STATIC_DRAW);
         console.log(`Created coral`);
     }
 }
@@ -13258,6 +13361,12 @@ class Particle {
             if (!skip) {
                 this.pos = __WEBPACK_IMPORTED_MODULE_0_gl_matrix__["d" /* vec3 */].fromValues(clickVal[0] + change[0], clickVal[1] + change[1], clickVal[2] + change[2]);
             }
+        }
+        // FFT changes
+        if (!(typeof Particle.FFT === 'undefined')) {
+            let z = (this.orig[2] + 6 * 25) / 9;
+            this.pos[1] = this.pos[1] * (255 - Particle.FFT[z]) / 255;
+            //console.log(z);
         }
         //this.colChange();
     }
@@ -16510,12 +16619,14 @@ class ShaderProgram {
         this.attrNor = __WEBPACK_IMPORTED_MODULE_1__globals__["a" /* gl */].getAttribLocation(this.prog, "vs_Nor");
         this.attrCol = __WEBPACK_IMPORTED_MODULE_1__globals__["a" /* gl */].getAttribLocation(this.prog, "vs_Col");
         this.attrTranslate = __WEBPACK_IMPORTED_MODULE_1__globals__["a" /* gl */].getAttribLocation(this.prog, "vs_Translate");
+        this.attrNote = __WEBPACK_IMPORTED_MODULE_1__globals__["a" /* gl */].getAttribLocation(this.prog, "vs_Note");
         this.unifModel = __WEBPACK_IMPORTED_MODULE_1__globals__["a" /* gl */].getUniformLocation(this.prog, "u_Model");
         this.unifModelInvTr = __WEBPACK_IMPORTED_MODULE_1__globals__["a" /* gl */].getUniformLocation(this.prog, "u_ModelInvTr");
         this.unifViewProj = __WEBPACK_IMPORTED_MODULE_1__globals__["a" /* gl */].getUniformLocation(this.prog, "u_ViewProj");
         this.unifCameraAxes = __WEBPACK_IMPORTED_MODULE_1__globals__["a" /* gl */].getUniformLocation(this.prog, "u_CameraAxes");
         this.unifTime = __WEBPACK_IMPORTED_MODULE_1__globals__["a" /* gl */].getUniformLocation(this.prog, "u_Time");
         this.unifAlpha = __WEBPACK_IMPORTED_MODULE_1__globals__["a" /* gl */].getUniformLocation(this.prog, "u_Alpha");
+        this.unifNoteWeight = __WEBPACK_IMPORTED_MODULE_1__globals__["a" /* gl */].getUniformLocation(this.prog, "u_Notes");
     }
     use() {
         if (activeProgram !== this.prog) {
@@ -16559,6 +16670,12 @@ class ShaderProgram {
             __WEBPACK_IMPORTED_MODULE_1__globals__["a" /* gl */].uniform1f(this.unifAlpha, a);
         }
     }
+    setNotes(n) {
+        this.use();
+        if (this.unifNoteWeight !== -1) {
+            __WEBPACK_IMPORTED_MODULE_1__globals__["a" /* gl */].uniform1fv(this.unifNoteWeight, n);
+        }
+    }
     draw(d) {
         this.use();
         if (this.attrPos != -1 && d.bindPos()) {
@@ -16579,6 +16696,11 @@ class ShaderProgram {
             __WEBPACK_IMPORTED_MODULE_1__globals__["a" /* gl */].enableVertexAttribArray(this.attrTranslate);
             __WEBPACK_IMPORTED_MODULE_1__globals__["a" /* gl */].vertexAttribPointer(this.attrTranslate, 3, __WEBPACK_IMPORTED_MODULE_1__globals__["a" /* gl */].FLOAT, false, 0, 0);
             __WEBPACK_IMPORTED_MODULE_1__globals__["a" /* gl */].vertexAttribDivisor(this.attrTranslate, 1); // Advance 1 index in translate VBO for each drawn instance
+        }
+        if (this.attrNote != -1 && d.bindNote()) {
+            __WEBPACK_IMPORTED_MODULE_1__globals__["a" /* gl */].enableVertexAttribArray(this.attrNote);
+            __WEBPACK_IMPORTED_MODULE_1__globals__["a" /* gl */].vertexAttribPointer(this.attrNote, 1, __WEBPACK_IMPORTED_MODULE_1__globals__["a" /* gl */].FLOAT, false, 0, 0);
+            __WEBPACK_IMPORTED_MODULE_1__globals__["a" /* gl */].vertexAttribDivisor(this.attrNote, 1); // Advance 1 index in col VBO for each drawn instance
         }
         d.bindIdx();
         __WEBPACK_IMPORTED_MODULE_1__globals__["a" /* gl */].drawElementsInstanced(d.drawMode(), d.elemCount(), __WEBPACK_IMPORTED_MODULE_1__globals__["a" /* gl */].UNSIGNED_INT, 0, d.numInstances);
@@ -16646,13 +16768,13 @@ module.exports = "#version 300 es\n\n// This is a fragment shader. If you've ope
 /* 86 */
 /***/ (function(module, exports) {
 
-module.exports = "#version 300 es\n\n//This is a vertex shader. While it is called a \"shader\" due to outdated conventions, this file\n//is used to apply matrix transformations to the arrays of vertex data passed to it.\n//Since this code is run on your GPU, each vertex is transformed simultaneously.\n//If it were run on your CPU, each vertex would have to be processed in a FOR loop, one at a time.\n//This simultaneous transformation allows your program to run much faster, especially when rendering\n//geometry with millions of vertices.\n\nuniform mat4 u_Model;       // The matrix that defines the transformation of the\n                            // object we're rendering. In this assignment,\n                            // this will be the result of traversing your scene graph.\n\nuniform mat4 u_ModelInvTr;  // The inverse transpose of the model matrix.\n                            // This allows us to transform the object's normals properly\n                            // if the object has been non-uniformly scaled.\n\nuniform mat4 u_ViewProj;    // The matrix that defines the camera's transformation.\n                            // We've written a static matrix for you to use for HW2,\n                            // but in HW3 you'll have to generate one yourself\n\nin vec4 vs_Pos;             // The array of vertex positions passed to the shader\n\nin vec4 vs_Nor;             // The array of vertex normals passed to the shader\n\nin vec4 vs_Col;             // The array of vertex colors passed to the shader.\n\nout vec4 fs_Pos;\nout vec4 fs_Nor;            // The array of normals that has been transformed by u_ModelInvTr. This is implicitly passed to the fragment shader.\nout vec4 fs_LightVec;       // The direction in which our virtual light lies, relative to each vertex. This is implicitly passed to the fragment shader.\nout vec4 fs_Col;            // The color of each vertex. This is implicitly passed to the fragment shader.\n\nconst vec4 lightPos = vec4(0, 50, 20, 1); //The position of our virtual light, which is used to compute the shading of\n                                        //the geometry in the fragment shader.\n\nvoid main()\n{\n    if (vs_Pos.y < -39.5) {\n        fs_Col = vs_Col;                         // Pass the vertex colors to the fragment shader for interpolation\n    } else {\n        fs_Col = vec4(213.f / 255.0, 124.f / 255.0, 255.f / 255.0, 1.0);\n    }\n    \n    fs_Pos = vs_Pos;\n\n    mat3 invTranspose = mat3(u_ModelInvTr);\n    fs_Nor = vec4(invTranspose * vec3(vs_Nor), 0);          // Pass the vertex normals to the fragment shader for interpolation.\n                                                            // Transform the geometry's normals by the inverse transpose of the\n                                                            // model matrix. This is necessary to ensure the normals remain\n                                                            // perpendicular to the surface after the surface is transformed by\n                                                            // the model matrix.\n\n\n    vec4 modelposition = u_Model * vs_Pos;   // Temporarily store the transformed vertex positions for use below\n\n    fs_LightVec = lightPos - modelposition;  // Compute the direction in which the light source lies\n\n    gl_Position = u_ViewProj * modelposition;// gl_Position is a built-in variable of OpenGL which is\n                                             // used to render the final positions of the geometry's vertices\n}\n"
+module.exports = "#version 300 es\n\n//This is a vertex shader. While it is called a \"shader\" due to outdated conventions, this file\n//is used to apply matrix transformations to the arrays of vertex data passed to it.\n//Since this code is run on your GPU, each vertex is transformed simultaneously.\n//If it were run on your CPU, each vertex would have to be processed in a FOR loop, one at a time.\n//This simultaneous transformation allows your program to run much faster, especially when rendering\n//geometry with millions of vertices.\n\nuniform mat4 u_Model;       // The matrix that defines the transformation of the\n                            // object we're rendering. In this assignment,\n                            // this will be the result of traversing your scene graph.\n\nuniform mat4 u_ModelInvTr;  // The inverse transpose of the model matrix.\n                            // This allows us to transform the object's normals properly\n                            // if the object has been non-uniformly scaled.\n\nuniform mat4 u_ViewProj;    // The matrix that defines the camera's transformation.\n                            // We've written a static matrix for you to use for HW2,\n                            // but in HW3 you'll have to generate one yourself\nuniform float u_Notes[12];\n\nin vec4 vs_Pos;             // The array of vertex positions passed to the shader\n\nin vec4 vs_Nor;             // The array of vertex normals passed to the shader\n\nin vec4 vs_Col;             // The array of vertex colors passed to the shader.\n\n// in float vs_Note;\n\nout vec4 fs_Pos;\nout vec4 fs_Nor;            // The array of normals that has been transformed by u_ModelInvTr. This is implicitly passed to the fragment shader.\nout vec4 fs_LightVec;       // The direction in which our virtual light lies, relative to each vertex. This is implicitly passed to the fragment shader.\nout vec4 fs_Col;            // The color of each vertex. This is implicitly passed to the fragment shader.\n// out vec2 fs_Num;\n\nconst vec4 lightPos = vec4(0, 50, 20, 1); //The position of our virtual light, which is used to compute the shading of\n                                        //the geometry in the fragment shader.\n\nmat4 scale(float x, float y, float z){\n    return mat4(\n        vec4(x,   0.0, 0.0, 0.0),\n        vec4(0.0, y,   0.0, 0.0),\n        vec4(0.0, 0.0, z,   0.0),\n        vec4(0.0, 0.0, 0.0, 1.0)\n    );\n}\n\nmat4 translate(float x, float y, float z){\n    return mat4(\n        vec4(1.0, 0.0, 0.0, 0.0),\n        vec4(0.0, 1.0, 0.0, 0.0),\n        vec4(0.0, 0.0, 1.0, 0.0),\n        vec4(x,   y,   z,   1.0)\n    );\n}\n\nvoid main()\n{\n    if (vs_Pos.y < -39.5) {\n        fs_Col = vs_Col;                         // Pass the vertex colors to the fragment shader for interpolation\n    } else {\n        fs_Col = vec4(213.f / 255.0, 124.f / 255.0, 255.f / 255.0, vs_Col.a);\n    }\n\n    float n = u_Notes[int(vs_Col.a * 12.f)];\n    \n    fs_Pos = vs_Pos;\n\n    // fs_Num = vec2(u_Notes[int(vs_Note)], 0.f);\n\n    mat3 invTranspose = mat3(u_ModelInvTr);\n    fs_Nor = vec4(invTranspose * vec3(vs_Nor), 0);          // Pass the vertex normals to the fragment shader for interpolation.\n                                                            // Transform the geometry's normals by the inverse transpose of the\n                                                            // model matrix. This is necessary to ensure the normals remain\n                                                            // perpendicular to the surface after the surface is transformed by\n                                                            // the model matrix.\n\n    mat4 modL = translate(0.f, -40.f, 0.f) * scale(1.f, n * 1.5, 1.f) * translate(0.f, 40.f, 0.f) * u_Model;\n    vec4 modelposition = modL * vs_Pos;   // Temporarily store the transformed vertex positions for use below\n\n    fs_LightVec = lightPos - modelposition;  // Compute the direction in which the light source lies\n\n    gl_Position = u_ViewProj * modelposition;// gl_Position is a built-in variable of OpenGL which is\n                                             // used to render the final positions of the geometry's vertices\n}\n"
 
 /***/ }),
 /* 87 */
 /***/ (function(module, exports) {
 
-module.exports = "#version 300 es\n\n// This is a fragment shader. If you've opened this file first, please\n// open and read lambert.vert.glsl before reading on.\n// Unlike the vertex shader, the fragment shader actually does compute\n// the shading of geometry. For every pixel in your program's output\n// screen, the fragment shader is run for every bit of geometry that\n// particular pixel overlaps. By implicitly interpolating the position\n// data passed into the fragment shader by the vertex shader, the fragment shader\n// can compute what color to apply to its pixel based on things like vertex\n// position, light position, and vertex color.\nprecision highp float;\n\nuniform vec4 u_Color; // The color with which to render this instance of geometry.\nuniform float u_Time;\n\n// These are the interpolated values out of the rasterizer, so you can't know\n// their specific values without knowing the vertices that contributed to them\nin vec4 fs_Nor;\nin vec4 fs_LightVec;\nin vec4 fs_Col;\nin vec4 fs_Pos;\n\nout vec4 out_Col; // This is the final output color that you will see on your\n                  // screen for the pixel that is currently being processed.\n\n\n// NOISE\n\nvec4 permute(vec4 x){return mod(((x*34.0)+1.0)*x, 289.0);}\nvec4 taylorInvSqrt(vec4 r){return 1.79284291400159 - 0.85373472095314 * r;}\n\nfloat snoise(vec3 v){ \n  const vec2  C = vec2(1.0/6.0, 1.0/3.0) ;\n  const vec4  D = vec4(0.0, 0.5, 1.0, 2.0);\n\n// First corner\n  vec3 i  = floor(v + dot(v, C.yyy) );\n  vec3 x0 =   v - i + dot(i, C.xxx) ;\n\n// Other corners\n  vec3 g = step(x0.yzx, x0.xyz);\n  vec3 l = 1.0 - g;\n  vec3 i1 = min( g.xyz, l.zxy );\n  vec3 i2 = max( g.xyz, l.zxy );\n\n  //  x0 = x0 - 0. + 0.0 * C \n  vec3 x1 = x0 - i1 + 1.0 * C.xxx;\n  vec3 x2 = x0 - i2 + 2.0 * C.xxx;\n  vec3 x3 = x0 - 1. + 3.0 * C.xxx;\n\n// Permutations\n  i = mod(i, 289.0 ); \n  vec4 p = permute( permute( permute( \n             i.z + vec4(0.0, i1.z, i2.z, 1.0 ))\n           + i.y + vec4(0.0, i1.y, i2.y, 1.0 )) \n           + i.x + vec4(0.0, i1.x, i2.x, 1.0 ));\n\n// Gradients\n// ( N*N points uniformly over a square, mapped onto an octahedron.)\n  float n_ = 1.0/7.0; // N=7\n  vec3  ns = n_ * D.wyz - D.xzx;\n\n  vec4 j = p - 49.0 * floor(p * ns.z *ns.z);  //  mod(p,N*N)\n\n  vec4 x_ = floor(j * ns.z);\n  vec4 y_ = floor(j - 7.0 * x_ );    // mod(j,N)\n\n  vec4 x = x_ *ns.x + ns.yyyy;\n  vec4 y = y_ *ns.x + ns.yyyy;\n  vec4 h = 1.0 - abs(x) - abs(y);\n\n  vec4 b0 = vec4( x.xy, y.xy );\n  vec4 b1 = vec4( x.zw, y.zw );\n\n  vec4 s0 = floor(b0)*2.0 + 1.0;\n  vec4 s1 = floor(b1)*2.0 + 1.0;\n  vec4 sh = -step(h, vec4(0.0));\n\n  vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy ;\n  vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww ;\n\n  vec3 p0 = vec3(a0.xy,h.x);\n  vec3 p1 = vec3(a0.zw,h.y);\n  vec3 p2 = vec3(a1.xy,h.z);\n  vec3 p3 = vec3(a1.zw,h.w);\n\n//Normalise gradients\n  vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2, p2), dot(p3,p3)));\n  p0 *= norm.x;\n  p1 *= norm.y;\n  p2 *= norm.z;\n  p3 *= norm.w;\n\n// Mix final noise value\n  vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);\n  m = m * m;\n  return 42.0 * dot( m*m, vec4( dot(p0,x0), dot(p1,x1), \n                                dot(p2,x2), dot(p3,x3) ) );\n}\n\nvec3 mix3(vec3 v1, vec3 v2, vec3 v3, float f) {\n  if (f < 0.6) {\n    return mix(v1, v2, f * 1.666666666f);\n  } else {\n    return mix(v2, v3, (f - 0.6) * 2.5f);\n  }\n}\n\n\n\nvoid main()\n{\n    // Material base color (before shading)\n        vec4 diffuseColor = vec4((vec3(1, 1, 1) - sqrt(sqrt(vec3(1, 1, 1) - fs_Col.xyz))) * 2.f + 0.075, 1.0);\n\n        // Calculate the diffuse term for Lambert shading\n        float diffuseTerm = 0.5;\n        if (diffuseColor.a > 0.1) {\n          diffuseTerm = dot(normalize(fs_Nor), normalize(fs_LightVec));\n          // Avoid negative lighting values\n          diffuseTerm = min(diffuseTerm, 1.0);\n          diffuseTerm = max(diffuseTerm, 0.0);\n        }\n\n        float ambientTerm = 0.2;\n\n        float lightIntensity = diffuseTerm + ambientTerm;   //Add a small float value to the color multiplier\n                                                            //to simulate ambient lighting. This ensures that faces that are not\n                                                            //lit by our point light are not completely black.\n\n        if (fs_Pos.y >= -41.f) {\n            float waterMove  = (sin((u_Time + 4.f) * 0.01) * 0.5 + \n                                sin((u_Time + 4.f) * 0.02) * 0.3 + \n                                sin((u_Time + 4.f) * 0.05) * 0.2 + \n                                cos(((u_Time + 4.f) + 27.f) * 0.01) * 0.3) / 2.f;\n            float firstSamp = sqrt(sqrt(abs(snoise(vec3(fs_Pos.x, 0, fs_Pos.z) * (4.5f + waterMove) * 0.01))));\n            float secondSamp = sqrt(sqrt(abs(snoise((vec3(fs_Pos.x, 0, fs_Pos.z) + vec3(50, 0, 40)) * (1.5f + waterMove) * 0.05))));\n            float watText = firstSamp * secondSamp;\n            vec3 waterShine = vec3(min(diffuseColor.r * 1.4, 1.0),\n                                   min(diffuseColor.g * 1.4, 1.0),\n                                   min(diffuseColor.b * 1.55, 1.0));\n            diffuseColor.rgb = mix3(waterShine, diffuseColor.rgb, diffuseColor.rgb, watText);\n        }\n\n        // Compute final shaded color\n        float mixVal = (length(fs_Pos.xz) / 200.f);\n        out_Col = mix(vec4(diffuseColor.rgb * lightIntensity, diffuseColor.a), vec4(0.f, 0.f, 0.f, 1.f), mixVal);\n}\n"
+module.exports = "#version 300 es\n\n// This is a fragment shader. If you've opened this file first, please\n// open and read lambert.vert.glsl before reading on.\n// Unlike the vertex shader, the fragment shader actually does compute\n// the shading of geometry. For every pixel in your program's output\n// screen, the fragment shader is run for every bit of geometry that\n// particular pixel overlaps. By implicitly interpolating the position\n// data passed into the fragment shader by the vertex shader, the fragment shader\n// can compute what color to apply to its pixel based on things like vertex\n// position, light position, and vertex color.\nprecision highp float;\n\nuniform vec4 u_Color; // The color with which to render this instance of geometry.\nuniform float u_Time;\nuniform float u_Notes[12];\n\n// These are the interpolated values out of the rasterizer, so you can't know\n// their specific values without knowing the vertices that contributed to them\nin vec4 fs_Nor;\nin vec4 fs_LightVec;\nin vec4 fs_Col;\nin vec4 fs_Pos;\n//flat in uint fs_Num;\n// in vec2 fs_Num;\n\nout vec4 out_Col; // This is the final output color that you will see on your\n                  // screen for the pixel that is currently being processed.\n\n\n// NOISE\n\nvec4 permute(vec4 x){return mod(((x*34.0)+1.0)*x, 289.0);}\nvec4 taylorInvSqrt(vec4 r){return 1.79284291400159 - 0.85373472095314 * r;}\n\nfloat snoise(vec3 v){ \n  const vec2  C = vec2(1.0/6.0, 1.0/3.0) ;\n  const vec4  D = vec4(0.0, 0.5, 1.0, 2.0);\n\n// First corner\n  vec3 i  = floor(v + dot(v, C.yyy) );\n  vec3 x0 =   v - i + dot(i, C.xxx) ;\n\n// Other corners\n  vec3 g = step(x0.yzx, x0.xyz);\n  vec3 l = 1.0 - g;\n  vec3 i1 = min( g.xyz, l.zxy );\n  vec3 i2 = max( g.xyz, l.zxy );\n\n  //  x0 = x0 - 0. + 0.0 * C \n  vec3 x1 = x0 - i1 + 1.0 * C.xxx;\n  vec3 x2 = x0 - i2 + 2.0 * C.xxx;\n  vec3 x3 = x0 - 1. + 3.0 * C.xxx;\n\n// Permutations\n  i = mod(i, 289.0 ); \n  vec4 p = permute( permute( permute( \n             i.z + vec4(0.0, i1.z, i2.z, 1.0 ))\n           + i.y + vec4(0.0, i1.y, i2.y, 1.0 )) \n           + i.x + vec4(0.0, i1.x, i2.x, 1.0 ));\n\n// Gradients\n// ( N*N points uniformly over a square, mapped onto an octahedron.)\n  float n_ = 1.0/7.0; // N=7\n  vec3  ns = n_ * D.wyz - D.xzx;\n\n  vec4 j = p - 49.0 * floor(p * ns.z *ns.z);  //  mod(p,N*N)\n\n  vec4 x_ = floor(j * ns.z);\n  vec4 y_ = floor(j - 7.0 * x_ );    // mod(j,N)\n\n  vec4 x = x_ *ns.x + ns.yyyy;\n  vec4 y = y_ *ns.x + ns.yyyy;\n  vec4 h = 1.0 - abs(x) - abs(y);\n\n  vec4 b0 = vec4( x.xy, y.xy );\n  vec4 b1 = vec4( x.zw, y.zw );\n\n  vec4 s0 = floor(b0)*2.0 + 1.0;\n  vec4 s1 = floor(b1)*2.0 + 1.0;\n  vec4 sh = -step(h, vec4(0.0));\n\n  vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy ;\n  vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww ;\n\n  vec3 p0 = vec3(a0.xy,h.x);\n  vec3 p1 = vec3(a0.zw,h.y);\n  vec3 p2 = vec3(a1.xy,h.z);\n  vec3 p3 = vec3(a1.zw,h.w);\n\n//Normalise gradients\n  vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2, p2), dot(p3,p3)));\n  p0 *= norm.x;\n  p1 *= norm.y;\n  p2 *= norm.z;\n  p3 *= norm.w;\n\n// Mix final noise value\n  vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);\n  m = m * m;\n  return 42.0 * dot( m*m, vec4( dot(p0,x0), dot(p1,x1), \n                                dot(p2,x2), dot(p3,x3) ) );\n}\n\nvec3 mix3(vec3 v1, vec3 v2, vec3 v3, float f) {\n  if (f < 0.6) {\n    return mix(v1, v2, f * 1.666666666f);\n  } else {\n    return mix(v2, v3, (f - 0.6) * 2.5f);\n  }\n}\n\n\n\nvoid main()\n{\n      //Determines which coral has which effects\n        highp int index = int(fs_Col.a * 12.f);\n\n    // Material base color (before shading)\n        vec4 diffuseColor = vec4((vec3(1, 1, 1) - sqrt(sqrt(vec3(1, 1, 1) - fs_Col.xyz))) * 2.f + 0.075, 1.0);\n\n        // Calculate the diffuse term for Lambert shading\n        float diffuseTerm = dot(normalize(fs_Nor), normalize(fs_LightVec));\n        // Avoid negative lighting values\n        diffuseTerm = min(diffuseTerm, 1.0);\n        diffuseTerm = max(diffuseTerm, 0.0);\n\n        float ambientTerm = 0.5;\n\n        float lightIntensity = diffuseTerm * u_Notes[index] * u_Notes[index] * 0.9f + ambientTerm;   //Add a small float value to the color multiplier\n                                                            //to simulate ambient lighting. This ensures that faces that are not\n                                                            //lit by our point light are not completely black.\n\n        float waterMove  = (sin((u_Time + 4.f) * 0.01) * 0.5 + \n                            sin((u_Time + 4.f) * 0.02) * 0.3 + \n                            sin((u_Time + 4.f) * 0.05) * 0.2 + \n                            cos(((u_Time + 4.f) + 27.f) * 0.01) * 0.3) / 2.f;\n        float firstSamp = sqrt(sqrt(abs(snoise(vec3(fs_Pos.x, 0, fs_Pos.z) * (4.5f + waterMove) * 0.01))));\n        float secondSamp = sqrt(sqrt(abs(snoise((vec3(fs_Pos.x, 0, fs_Pos.z) + vec3(50, 0, 40)) * (1.5f + waterMove) * 0.05))));\n        float watText = firstSamp * secondSamp;\n        vec3 waterShine = vec3(min(diffuseColor.r * 1.4, 1.0),\n                               min(diffuseColor.g * 1.4, 1.0),\n                               min(diffuseColor.b * 1.55, 1.0));\n        diffuseColor.rgb = mix3(waterShine, diffuseColor.rgb, diffuseColor.rgb, watText);\n\n        // Compute final shaded color\n        float mixVal = (length(fs_Pos.xz) / 200.f);\n        out_Col = mix(vec4(diffuseColor.rgb * lightIntensity, diffuseColor.a), vec4(0.f, 0.f, 0.f, 1.f), mixVal);\n}\n"
 
 /***/ })
 /******/ ]);

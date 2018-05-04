@@ -8,12 +8,14 @@ abstract class Drawable {
   bufNor: WebGLBuffer;
   bufTranslate: WebGLBuffer;
   bufCol: WebGLBuffer;
+  bufNote: WebGLBuffer;
 
   idxGenerated: boolean = false;
   posGenerated: boolean = false;
   norGenerated: boolean = false;
   colGenerated: boolean = false;
   translateGenerated: boolean = false;
+  noteGenerated: boolean = false;
 
   numInstances: number = 0; // How many instances of this Drawable the shader program should draw
 
@@ -25,6 +27,7 @@ abstract class Drawable {
     gl.deleteBuffer(this.bufNor);
     gl.deleteBuffer(this.bufCol);
     gl.deleteBuffer(this.bufTranslate);
+    gl.deleteBuffer(this.bufNote);
   }
 
   generateIdx() {
@@ -50,6 +53,11 @@ abstract class Drawable {
   generateTranslate() {
     this.translateGenerated = true;
     this.bufTranslate = gl.createBuffer();
+  }
+
+  generateNote() {
+    this.noteGenerated = true;
+    this.bufNote = gl.createBuffer();
   }
 
   bindIdx(): boolean {
@@ -85,6 +93,13 @@ abstract class Drawable {
       gl.bindBuffer(gl.ARRAY_BUFFER, this.bufTranslate);
     }
     return this.translateGenerated;
+  }
+
+  bindNote(): boolean {
+    if (this.noteGenerated) {
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.bufNote);
+    }
+    return this.noteGenerated;
   }
 
   elemCount(): number {

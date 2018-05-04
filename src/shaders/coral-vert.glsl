@@ -18,6 +18,7 @@ uniform mat4 u_ModelInvTr;  // The inverse transpose of the model matrix.
 uniform mat4 u_ViewProj;    // The matrix that defines the camera's transformation.
                             // We've written a static matrix for you to use for HW2,
                             // but in HW3 you'll have to generate one yourself
+uniform float u_Notes[12];
 
 in vec4 vs_Pos;             // The array of vertex positions passed to the shader
 
@@ -25,23 +26,48 @@ in vec4 vs_Nor;             // The array of vertex normals passed to the shader
 
 in vec4 vs_Col;             // The array of vertex colors passed to the shader.
 
+// in float vs_Note;
+
 out vec4 fs_Pos;
 out vec4 fs_Nor;            // The array of normals that has been transformed by u_ModelInvTr. This is implicitly passed to the fragment shader.
 out vec4 fs_LightVec;       // The direction in which our virtual light lies, relative to each vertex. This is implicitly passed to the fragment shader.
 out vec4 fs_Col;            // The color of each vertex. This is implicitly passed to the fragment shader.
+// out vec2 fs_Num;
 
 const vec4 lightPos = vec4(0, 50, 20, 1); //The position of our virtual light, which is used to compute the shading of
                                         //the geometry in the fragment shader.
+
+mat4 scale(float x, float y, float z){
+    return mat4(
+        vec4(x,   0.0, 0.0, 0.0),
+        vec4(0.0, y,   0.0, 0.0),
+        vec4(0.0, 0.0, z,   0.0),
+        vec4(0.0, 0.0, 0.0, 1.0)
+    );
+}
+
+mat4 translate(float x, float y, float z){
+    return mat4(
+        vec4(1.0, 0.0, 0.0, 0.0),
+        vec4(0.0, 1.0, 0.0, 0.0),
+        vec4(0.0, 0.0, 1.0, 0.0),
+        vec4(x,   y,   z,   1.0)
+    );
+}
 
 void main()
 {
     if (vs_Pos.y < -39.5) {
         fs_Col = vs_Col;                         // Pass the vertex colors to the fragment shader for interpolation
     } else {
-        fs_Col = vec4(213.f / 255.0, 124.f / 255.0, 255.f / 255.0, 1.0);
+        fs_Col = vec4(213.f / 255.0, 124.f / 255.0, 255.f / 255.0, vs_Col.a);
     }
+
+    float n = u_Notes[int(vs_Col.a * 12.f)];
     
     fs_Pos = vs_Pos;
+
+    // fs_Num = vec2(u_Notes[int(vs_Note)], 0.f);
 
     mat3 invTranspose = mat3(u_ModelInvTr);
     fs_Nor = vec4(invTranspose * vec3(vs_Nor), 0);          // Pass the vertex normals to the fragment shader for interpolation.
@@ -50,8 +76,8 @@ void main()
                                                             // perpendicular to the surface after the surface is transformed by
                                                             // the model matrix.
 
-
-    vec4 modelposition = u_Model * vs_Pos;   // Temporarily store the transformed vertex positions for use below
+    mat4 modL = translate(0.f, -40.f, 0.f) * scale(1.f, n * 1.5, 1.f) * translate(0.f, 40.f, 0.f) * u_Model;
+    vec4 modelposition = modL * vs_Pos;   // Temporarily store the transformed vertex positions for use below
 
     fs_LightVec = lightPos - modelposition;  // Compute the direction in which the light source lies
 

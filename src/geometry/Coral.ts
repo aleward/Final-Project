@@ -41,6 +41,8 @@ export class CoralRule {
 
 // MY KELP!! thing
 class Coral extends Drawable {
+    note: number;
+
     // VBO information
     indices: number[] = [];
     positions: number[] = [];
@@ -57,11 +59,12 @@ class Coral extends Drawable {
     piece: Shape = new Shape("coral3.obj", 1);
     size: number = 1;
 
-    constructor(center: vec3) {
+    constructor(center: vec3, note: number) {
         super(); // Call the constructor of the super class. This is required.
         
         // First point in kelp
         this.center = center;
+        this.note = note;
     }
 
     // Function to expand the currently stored grammar
@@ -115,8 +118,8 @@ class Coral extends Drawable {
                     let currNorm: vec4 = vec4.fromValues(this.piece.norms[j], 
                                                          this.piece.norms[j + 1], 
                                                          this.piece.norms[j + 2], 0);
-                    vec4.transformMat4(currNorm, currNorm, turt.turn);
-                    vec4.transformMat4(currNorm, currNorm, turt.dir);
+                    //vec4.transformMat4(currNorm, currNorm, turt.turn);
+                    //vec4.transformMat4(currNorm, currNorm, turt.dir);
                     
                     this.normals.push(currNorm[0]);
                     this.normals.push(currNorm[1]);
@@ -139,7 +142,7 @@ class Coral extends Drawable {
                     this.colors.push(103 / 255.0);
                     this.colors.push(63 / 255.0);
                     this.colors.push(168 / 255.0);
-                    this.colors.push(1.0);
+                    this.colors.push(this.note / 12);
                 }
                 turt.updateDepth(turt.depth + 1);
                 
@@ -179,10 +182,18 @@ class Coral extends Drawable {
         var finalNormals: Float32Array = new Float32Array(this.normals);
         var finalColors: Float32Array = new Float32Array(this.colors);   
 
+        // let nums: number[] = [];
+        // for (let i = 0; i < finalPositions.length / 4; i++) {
+        //     nums.push(this.note);
+        // }
+
+        // var noteNums: Float32Array = new Float32Array(nums);
+
         this.generateIdx();
         this.generatePos();
         this.generateNor();
         this.generateCol();
+        // this.generateNote();
     
         this.count = this.indices.length;
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.bufIdx);
@@ -196,6 +207,9 @@ class Coral extends Drawable {
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.bufCol);
         gl.bufferData(gl.ARRAY_BUFFER, finalColors, gl.STATIC_DRAW);
+
+        // gl.bindBuffer(gl.ARRAY_BUFFER, this.bufNote);
+        // gl.bufferData(gl.ARRAY_BUFFER, noteNums, gl.STATIC_DRAW);
     
         console.log(`Created coral`);
     }

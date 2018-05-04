@@ -13,6 +13,7 @@ precision highp float;
 
 uniform vec4 u_Color; // The color with which to render this instance of geometry.
 uniform float u_Time;
+uniform float u_Notes[12];
 
 // These are the interpolated values out of the rasterizer, so you can't know
 // their specific values without knowing the vertices that contributed to them
@@ -20,6 +21,8 @@ in vec4 fs_Nor;
 in vec4 fs_LightVec;
 in vec4 fs_Col;
 in vec4 fs_Pos;
+//flat in uint fs_Num;
+// in vec2 fs_Num;
 
 out vec4 out_Col; // This is the final output color that you will see on your
                   // screen for the pixel that is currently being processed.
@@ -111,37 +114,35 @@ vec3 mix3(vec3 v1, vec3 v2, vec3 v3, float f) {
 
 void main()
 {
+      //Determines which coral has which effects
+        highp int index = int(fs_Col.a * 12.f);
+
     // Material base color (before shading)
         vec4 diffuseColor = vec4((vec3(1, 1, 1) - sqrt(sqrt(vec3(1, 1, 1) - fs_Col.xyz))) * 2.f + 0.075, 1.0);
 
         // Calculate the diffuse term for Lambert shading
-        float diffuseTerm = 0.5;
-        if (diffuseColor.a > 0.1) {
-          diffuseTerm = dot(normalize(fs_Nor), normalize(fs_LightVec));
-          // Avoid negative lighting values
-          diffuseTerm = min(diffuseTerm, 1.0);
-          diffuseTerm = max(diffuseTerm, 0.0);
-        }
+        float diffuseTerm = dot(normalize(fs_Nor), normalize(fs_LightVec));
+        // Avoid negative lighting values
+        diffuseTerm = min(diffuseTerm, 1.0);
+        diffuseTerm = max(diffuseTerm, 0.0);
 
-        float ambientTerm = 0.2;
+        float ambientTerm = 0.5;
 
-        float lightIntensity = diffuseTerm + ambientTerm;   //Add a small float value to the color multiplier
+        float lightIntensity = diffuseTerm * u_Notes[index] * u_Notes[index] * 0.9f + ambientTerm;   //Add a small float value to the color multiplier
                                                             //to simulate ambient lighting. This ensures that faces that are not
                                                             //lit by our point light are not completely black.
 
-        if (fs_Pos.y >= -41.f) {
-            float waterMove  = (sin((u_Time + 4.f) * 0.01) * 0.5 + 
-                                sin((u_Time + 4.f) * 0.02) * 0.3 + 
-                                sin((u_Time + 4.f) * 0.05) * 0.2 + 
-                                cos(((u_Time + 4.f) + 27.f) * 0.01) * 0.3) / 2.f;
-            float firstSamp = sqrt(sqrt(abs(snoise(vec3(fs_Pos.x, 0, fs_Pos.z) * (4.5f + waterMove) * 0.01))));
-            float secondSamp = sqrt(sqrt(abs(snoise((vec3(fs_Pos.x, 0, fs_Pos.z) + vec3(50, 0, 40)) * (1.5f + waterMove) * 0.05))));
-            float watText = firstSamp * secondSamp;
-            vec3 waterShine = vec3(min(diffuseColor.r * 1.4, 1.0),
-                                   min(diffuseColor.g * 1.4, 1.0),
-                                   min(diffuseColor.b * 1.55, 1.0));
-            diffuseColor.rgb = mix3(waterShine, diffuseColor.rgb, diffuseColor.rgb, watText);
-        }
+        float waterMove  = (sin((u_Time + 4.f) * 0.01) * 0.5 + 
+                            sin((u_Time + 4.f) * 0.02) * 0.3 + 
+                            sin((u_Time + 4.f) * 0.05) * 0.2 + 
+                            cos(((u_Time + 4.f) + 27.f) * 0.01) * 0.3) / 2.f;
+        float firstSamp = sqrt(sqrt(abs(snoise(vec3(fs_Pos.x, 0, fs_Pos.z) * (4.5f + waterMove) * 0.01))));
+        float secondSamp = sqrt(sqrt(abs(snoise((vec3(fs_Pos.x, 0, fs_Pos.z) + vec3(50, 0, 40)) * (1.5f + waterMove) * 0.05))));
+        float watText = firstSamp * secondSamp;
+        vec3 waterShine = vec3(min(diffuseColor.r * 1.4, 1.0),
+                               min(diffuseColor.g * 1.4, 1.0),
+                               min(diffuseColor.b * 1.55, 1.0));
+        diffuseColor.rgb = mix3(waterShine, diffuseColor.rgb, diffuseColor.rgb, watText);
 
         // Compute final shaded color
         float mixVal = (length(fs_Pos.xz) / 200.f);
