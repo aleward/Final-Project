@@ -3,6 +3,7 @@
 
 function preload() {
     uys7 = loadSound(["songs/uys7.mp3", "songs/uys7.wav"]);
+    brss = loadSound("songs/brss.mp3");
     hyena = loadSound("songs/hyena.mp3");
     tuning = loadSound("songs/tuner.mp3");
     chord = loadSound("songs/mid-c.mp3");
@@ -10,7 +11,7 @@ function preload() {
 }
 
 function setup() {
-    uys7.loop();
+    brss.loop();
     amp = new p5.Amplitude();
     fft = new p5.FFT(0.8, 64);
     

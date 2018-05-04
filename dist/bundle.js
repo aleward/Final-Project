@@ -3889,7 +3889,8 @@ let notSet = true;
 const controls = {
     'Camera Controls': 'Mouse',
     'Mode': 'Water',
-    'Music': 'UYS'
+    'Music': 'Shooting Stars by Bag Raiders',
+    'Pause': false
 };
 // Arrays for each feature type
 let godrays;
@@ -3991,7 +3992,8 @@ function main() {
     const gui = new __WEBPACK_IMPORTED_MODULE_2_dat_gui__["GUI"]();
     var mouseOps = gui.add(controls, 'Camera Controls', ['Mouse', 'Music']);
     var modeOps = gui.add(controls, 'Mode', ['Water', 'Stars']);
-    var songOps = gui.add(controls, 'Music', ['UYS', 'Hyena by Sam Gellaitry', 'Guitar Tuning', 'Plain Chord', 'Dial Tone']);
+    var songOps = gui.add(controls, 'Music', ['Shooting Stars by Bag Raiders', 'Hyena by Sam Gellaitry', 'UYS', 'Guitar Tuning', 'Plain Chord', 'Dial Tone']);
+    var pause = gui.add(controls, 'Pause');
     // get canvas and webgl context
     const canvas = document.getElementById('canvas');
     const gl = canvas.getContext('webgl2');
@@ -4112,18 +4114,35 @@ function main() {
             noteA[i] /= divisors[i];
         }
     }
-    let printCount = 0;
+    // let printCount: number = 0;
+    // let g = getAudioContext();
+    // let ac: AudioContext;
+    // Object.assign(g, ac);
+    // ac.resume();
     // This function will be called every frame
     function tick() {
+        pause.onChange(function (value) {
+            // if ((typeof currSound === 'undefined')) {
+            //   //uys7.loop();
+            //   preload();
+            //   setup();
+            // }
+            if (value = true && !(typeof currSound === 'undefined') && currSound.isLoaded() && currSound.isPlaying()) {
+                currSound.pause();
+            }
+            else if (value = true && !(typeof currSound === 'undefined') && currSound.isLoaded() && currSound.isPaused()) {
+                currSound.play();
+            }
+        });
         // KELP AND GOD RAY COLOR WARP---
         let lFreq = 0.5;
         let hFreq = 1;
         let noteAmp = [];
         if (notSet) {
-            let check = typeof uys7 === 'undefined';
+            let check = typeof brss === 'undefined';
             // let checkPeak: boolean = typeof peaks === 'undefined';
-            if (!check && uys7.isLoaded() && uys7.isPlaying()) {
-                currSound = uys7;
+            if (!check && brss.isLoaded() && brss.isPlaying()) {
+                currSound = brss;
                 notSet = false;
             }
             noteAmp = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
@@ -4133,6 +4152,11 @@ function main() {
                 if (value == 'UYS') {
                     currSound.stop();
                     currSound = uys7;
+                    currSound.loop();
+                }
+                else if (value == 'Shooting Stars by Bag Raiders') {
+                    currSound.stop();
+                    currSound = brss;
                     currSound.loop();
                 }
                 else if (value == 'Hyena by Sam Gellaitry') {
